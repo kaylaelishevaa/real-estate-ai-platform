@@ -1,0 +1,859 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  email                 String    @unique(map: "users_email_unique") @db.VarChar(255)
+  role                  String    @default("external") @db.VarChar(255)
+  email_verified_at     DateTime? @db.Timestamp(0)
+  password              String    @db.VarChar(255)
+  notification_settings String?   @db.Text
+  rememberToken         String?   @map("remember_token") @db.VarChar(100)
+  createdAt             DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt             DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+  status                String    @default("pending") @db.VarChar(255)
+  email_token           String?   @db.VarChar(255)
+  temporary_email       String?   @db.VarChar(255)
+  blogs                 Blog[]
+  contacts              Contact[]
+  externalLeads         Lead[]    @relation("ExternalAgentLeads")
+  picLeads              Lead[]    @relation("PicLeads")
+  listings              Listing[]
+  media                 Media[]
+  profile               Profile?  @relation("ProfileUser")
+  managedProfiles       Profile[] @relation("Manager")
+  picProfiles           Profile[] @relation("Pic")
+  waAgents              WaAgent[]
+
+  @@map("users")
+}
+
+model Role {
+  id          BigInt              @id @default(autoincrement()) @db.UnsignedBigInt
+  name        String              @db.VarChar(125)
+  guardName   String              @map("guard_name") @db.VarChar(125)
+  createdAt   DateTime?           @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime?           @updatedAt @map("updated_at") @db.Timestamp(0)
+  users       ModelHasRole[]
+  permissions RoleHasPermission[]
+
+  @@unique([name, guardName], map: "roles_name_guard_name_unique")
+  @@map("roles")
+}
+
+model Permission {
+  id                    BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  name                  String                  @db.VarChar(125)
+  guardName             String                  @map("guard_name") @db.VarChar(125)
+  createdAt             DateTime?               @map("created_at") @db.Timestamp(0)
+  updatedAt             DateTime?               @updatedAt @map("updated_at") @db.Timestamp(0)
+  model_has_permissions model_has_permissions[]
+  roles                 RoleHasPermission[]
+
+  @@unique([name, guardName], map: "permissions_name_guard_name_unique")
+  @@map("permissions")
+}
+
+model RoleHasPermission {
+  permissionId BigInt     @map("permission_id") @db.UnsignedBigInt
+  roleId       BigInt     @map("role_id") @db.UnsignedBigInt
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_has_permissions_permission_id_foreign")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_has_permissions_role_id_foreign")
+
+  @@id([permissionId, roleId])
+  @@index([roleId], map: "role_has_permissions_role_id_foreign")
+  @@map("role_has_permissions")
+}
+
+model ModelHasRole {
+  roleId    BigInt @map("role_id") @db.UnsignedBigInt
+  modelType String @map("model_type") @db.VarChar(255)
+  modelId   BigInt @map("model_id") @db.UnsignedBigInt
+  role      Role   @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "model_has_roles_role_id_foreign")
+
+  @@id([roleId, modelId, modelType])
+  @@index([modelId, modelType], map: "model_has_roles_model_id_model_type_index")
+  @@map("model_has_roles")
+}
+
+model Profile {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  firstName    String    @map("first_name") @db.VarChar(255)
+  lastName     String    @map("last_name") @db.VarChar(255)
+  country_code String?   @default("+62") @db.VarChar(255)
+  phone        String?   @db.VarChar(255)
+  avatar       String?   @db.VarChar(255)
+  bio          String?   @db.VarChar(255)
+  createdAt    DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+  managerId    BigInt?   @map("manager_id") @db.UnsignedBigInt
+  jobTitle     String?   @map("job_title") @db.VarChar(255)
+  joinDate     DateTime? @map("join_date") @db.Date
+  picId        BigInt?   @map("pic_id") @db.UnsignedBigInt
+  user         User?     @relation("ProfileUser", fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  manager      User?     @relation("Manager", fields: [managerId], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "profiles_manager_id_foreign")
+  pic          User?     @relation("Pic", fields: [picId], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "profiles_pic_id_foreign")
+
+  @@index([managerId], map: "profiles_manager_id_foreign")
+  @@index([picId], map: "profiles_pic_id_foreign")
+  @@map("profiles")
+}
+
+model Location {
+  id                                                            BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  name                                                          String           @db.VarChar(255)
+  slug                                                          String           @unique(map: "locations_slug_unique") @db.VarChar(255)
+  parentId                                                      BigInt?          @map("parent_id") @db.UnsignedBigInt
+  picture                                                       String?          @db.VarChar(255)
+  isSubarea                                                     Boolean?         @default(false) @map("is_subarea")
+  isPopular                                                     Boolean?         @default(false) @map("is_popular")
+  longitude                                                     String?          @db.VarChar(255)
+  latitude                                                      String?          @db.VarChar(255)
+  nearbyLocation                                                Json?            @map("nearby_location")
+  createdAt                                                     DateTime?        @map("created_at") @db.Timestamp(0)
+  updatedAt                                                     DateTime?        @updatedAt @map("updated_at") @db.Timestamp(0)
+  lowest_price                                                  Json?
+  highest_price                                                 Json?
+  listings                                                      Listing[]
+  parent                                                        Location?        @relation("LocationChildren", fields: [parentId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "locations_parent_id_foreign")
+  children                                                      Location[]       @relation("LocationChildren")
+  mortgage_leads_mortgage_leads_domicile_idTolocations          MortgageLead[]   @relation("mortgage_leads_domicile_idTolocations")
+  mortgage_leads_mortgage_leads_property_location_idTolocations MortgageLead[]   @relation("mortgage_leads_property_location_idTolocations")
+  apartments                                                    Apartment[]
+  newProjects                                                   NewProject[]
+  officeBuildings                                               OfficeBuilding[]
+
+  @@index([parentId], map: "locations_parent_id_foreign")
+  @@index([isPopular])
+  @@index([parentId])
+  @@map("locations")
+}
+
+model Company {
+  id           BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  avatar       String?      @db.VarChar(255)
+  name         String       @db.VarChar(255)
+  email        String       @unique(map: "companies_email_unique") @db.VarChar(255)
+  country_code String?      @default("+62") @db.VarChar(255)
+  phone        String       @unique(map: "companies_phone_unique") @db.VarChar(255)
+  address      String?      @db.VarChar(255)
+  createdAt    DateTime?    @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime?    @updatedAt @map("updated_at") @db.Timestamp(0)
+  newProjects  NewProject[]
+
+  @@map("companies")
+}
+
+model Contact {
+  id                                   BigInt            @id @default(autoincrement()) @db.UnsignedBigInt
+  firstName                            String            @map("first_name") @db.VarChar(255)
+  lastName                             String?           @map("last_name") @db.VarChar(255)
+  email                                String?           @db.VarChar(255)
+  country_code                         String?           @default("+62") @db.VarChar(255)
+  phone                                String            @db.VarChar(255)
+  avatar                               String?           @db.VarChar(255)
+  priority                             contacts_priority
+  companyId                            BigInt?           @map("company_id")
+  bio                                  String?           @db.Text
+  date_of_birth                        DateTime?         @db.Date
+  address                              String?           @db.Text
+  note                                 String?           @db.Text
+  rating                               Float?
+  message                              String?           @db.Text
+  type                                 contacts_type
+  createdAt                            DateTime?         @map("created_at") @db.Timestamp(0)
+  updatedAt                            DateTime?         @updatedAt @map("updated_at") @db.Timestamp(0)
+  owner_id                             BigInt            @db.UnsignedBigInt
+  users                                User              @relation(fields: [owner_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "contacts_owner_id_foreign")
+  leads                                Lead[]
+  listings_listings_agent_idTocontacts Listing[]         @relation("listings_agent_idTocontacts")
+  listings_listings_owner_idTocontacts Listing[]         @relation("listings_owner_idTocontacts")
+
+  @@unique([country_code, phone, type], map: "contacts_country_code_phone_type_unique")
+  @@index([owner_id], map: "contacts_owner_id_foreign")
+  @@map("contacts")
+}
+
+model Apartment {
+  id             BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  title          String          @db.VarChar(255)
+  slug           String          @unique(map: "apartments_slug_unique") @db.VarChar(255)
+  address        String?         @db.Text
+  locationId     BigInt          @map("location_id") @db.UnsignedBigInt
+  longitude      String?         @db.VarChar(255)
+  latitude       String?         @db.VarChar(255)
+  facilities     Json?
+  tower          Json?
+  nearbyLocation Json?           @map("nearby_location")
+  isPublished    Boolean         @map("is_published")
+  is_popular     Boolean         @default(false)
+  createdAt      DateTime?       @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime?       @updatedAt @map("updated_at") @db.Timestamp(0)
+  lowestPrice    Json?           @map("lowest_price")
+  highestPrice   Json?           @map("highest_price")
+  location       Location        @relation(fields: [locationId], references: [id], onUpdate: NoAction)
+  units          ApartmentUnit[]
+
+  @@index([locationId], map: "apartments_location_id_foreign")
+  @@index([isPublished, createdAt])
+  @@map("apartments")
+}
+
+model ApartmentUnit {
+  id               BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  unitNumber       String?    @map("unit_number") @db.VarChar(255)
+  towerName        String?    @map("tower_name") @db.VarChar(255)
+  condition        String?    @db.VarChar(255)
+  bedrooms         String?    @db.VarChar(255)
+  bathrooms        Int?
+  floor            Int?
+  floorZone        String?    @map("floor_zone") @db.VarChar(255)
+  buildingArea     Int?       @map("building_area")
+  isPetAllowed     Boolean?   @map("is_pet_allowed")
+  isRented         Boolean?   @map("is_rented")
+  hasMaidRoom      Boolean?   @map("has_maid_room")
+  hasStudyRoom     Boolean?   @map("has_study_room")
+  certificate_type String?    @db.VarChar(255)
+  other_fees       String?    @db.Text
+  minRentInMonth   Int?       @map("min_rent_in_month")
+  rental_notes     String?    @db.Text
+  paymentOptions   Json?      @map("payment_options")
+  apartmentId      BigInt?    @map("apartment_id") @db.UnsignedBigInt
+  createdAt        DateTime?  @map("created_at") @db.Timestamp(0)
+  updatedAt        DateTime?  @updatedAt @map("updated_at") @db.Timestamp(0)
+  apartment        Apartment? @relation(fields: [apartmentId], references: [id], onUpdate: NoAction, map: "apartment_units_apartment_id_foreign")
+
+  @@index([apartmentId], map: "apartment_units_apartment_id_foreign")
+  @@map("apartment_units")
+}
+
+model OfficeBuilding {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  title          String    @db.VarChar(255)
+  slug           String    @unique(map: "office_buildings_slug_unique") @db.VarChar(255)
+  isPublished    Boolean   @map("is_published")
+  locationId     BigInt?   @map("location_id") @db.UnsignedBigInt
+  address        String?   @db.VarChar(255)
+  longitude      String?   @db.VarChar(255)
+  latitude       String?   @db.VarChar(255)
+  facilities     Json?
+  nearbyLocation Json?     @map("nearby_location")
+  createdAt      DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+  lowestPrice    Json?     @map("lowest_price")
+  highestPrice   Json?     @map("highest_price")
+  location       Location? @relation(fields: [locationId], references: [id], onUpdate: NoAction, map: "office_buildings_location_id_foreign")
+  offices        Office[]
+
+  @@index([locationId], map: "office_buildings_location_id_foreign")
+  @@index([isPublished, createdAt])
+  @@map("office_buildings")
+}
+
+model Office {
+  id                  BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  unitNumber          String?         @map("unit_number") @db.VarChar(255)
+  certificate_type    String?         @db.VarChar(255)
+  floor               Int?
+  floor_zone          String?         @db.VarChar(255)
+  buildingArea        Int?            @map("building_area")
+  condition           String?         @db.VarChar(255)
+  serviceCharge       BigInt?         @map("service_charge")
+  serviceChargePerSqm BigInt?         @map("service_charge_per_sqm")
+  min_rent_in_month   Int?
+  createdAt           DateTime?       @map("created_at") @db.Timestamp(0)
+  updatedAt           DateTime?       @updatedAt @map("updated_at") @db.Timestamp(0)
+  officeBuildingId    BigInt?         @map("office_building_id") @db.UnsignedBigInt
+  officeBuilding      OfficeBuilding? @relation(fields: [officeBuildingId], references: [id], onUpdate: NoAction, map: "offices_office_building_id_foreign")
+
+  @@index([officeBuildingId], map: "offices_office_building_id_foreign")
+  @@map("offices")
+}
+
+model House {
+  id                BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  condition         String?   @db.VarChar(255)
+  bedrooms          Int?
+  bathrooms         Int?
+  carports          Int?
+  floor             Int?
+  landArea          Int?      @map("land_area")
+  buildingArea      Int?      @map("building_area")
+  min_rent_in_month Int?
+  is_rented         Boolean?
+  rental_notes      String?   @db.Text
+  hasMaidRoom       Boolean?  @map("has_maid_room")
+  hasPool           Boolean?  @map("has_pool")
+  houseType         String?   @map("house_type") @db.VarChar(255)
+  certificateType   String?   @map("certificate_type") @db.VarChar(255)
+  paymentOptions    Json?     @map("payment_options")
+  createdAt         DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt         DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("houses")
+}
+
+model Land {
+  id                BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  landArea          Int?      @map("land_area")
+  certificateType   String?   @map("certificate_type") @db.VarChar(255)
+  is_rented         Boolean?
+  rental_notes      String?   @db.Text
+  min_rent_in_month Int?
+  landType          String?   @map("land_type") @db.VarChar(255)
+  createdAt         DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt         DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("lands")
+}
+
+model Shop {
+  id                BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  buildingArea      String?   @map("building_area") @db.VarChar(255)
+  landArea          String?   @map("land_area") @db.VarChar(255)
+  floor             Int?
+  certificateType   String?   @map("certificate_type") @db.VarChar(255)
+  is_rented         Boolean?
+  rental_notes      String?   @db.Text
+  min_rent_in_month Int?
+  createdAt         DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt         DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("shops")
+}
+
+model Warehouse {
+  id                BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  landArea          Int?      @map("land_area")
+  buildingArea      Int?      @map("building_area")
+  certificateType   String?   @map("certificate_type") @db.VarChar(255)
+  is_rented         Boolean?
+  rental_notes      String?   @db.Text
+  min_rent_in_month Int?
+  warehouseType     String?   @map("warehouse_type") @db.VarChar(255)
+  createdAt         DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt         DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("warehouses")
+}
+
+model Hotel {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  landArea     Int?      @map("land_area")
+  buildingArea Int?      @map("building_area")
+  room         Int?
+  floor        Int?
+  is_chain     Boolean?
+  hotelType    String?   @map("hotel_type") @db.VarChar(255)
+  established  Int?
+  priceRange   String?   @map("price_range") @db.VarChar(255)
+  rating       String?   @db.VarChar(255)
+  createdAt    DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("hotels")
+}
+
+model Business {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  landArea     Int?      @map("land_area")
+  buildingArea Int?      @map("building_area")
+  established  Int?
+  priceRange   String?   @map("price_range") @db.VarChar(255)
+  businessType String?   @map("business_type") @db.VarChar(255)
+  createdAt    DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("businesses")
+}
+
+model NewProject {
+  id              BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  title           String           @db.VarChar(255)
+  slug            String           @unique(map: "new_projects_slug_unique") @db.VarChar(255)
+  propertyType    String           @map("property_type") @db.VarChar(255)
+  isCompleted     Boolean          @default(false) @map("is_completed")
+  isPublished     Boolean          @map("is_published")
+  developerId     BigInt?          @map("developer_id") @db.UnsignedBigInt
+  locationId      BigInt?          @map("location_id") @db.UnsignedBigInt
+  address         String?          @db.VarChar(255)
+  longitude       String?          @db.VarChar(255)
+  latitude        String?          @db.VarChar(255)
+  facilities      Json?
+  nearby_location Json?
+  brochureLink    String?          @map("brochure_link") @db.VarChar(255)
+  coverImage      String?          @map("cover_image") @db.VarChar(255)
+  youtube_embed   String?          @db.Text
+  createdAt       DateTime?        @map("created_at") @db.Timestamp(0)
+  updatedAt       DateTime?        @updatedAt @map("updated_at") @db.Timestamp(0)
+  lowestPrice     Json?            @map("lowest_price")
+  highestPrice    Json?            @map("highest_price")
+  units           NewProjectUnit[]
+  developer       Company?         @relation(fields: [developerId], references: [id], onUpdate: NoAction, map: "new_projects_developer_id_foreign")
+  location        Location?        @relation(fields: [locationId], references: [id], onUpdate: NoAction, map: "new_projects_location_id_foreign")
+
+  @@index([developerId], map: "new_projects_developer_id_foreign")
+  @@index([locationId], map: "new_projects_location_id_foreign")
+  @@index([isPublished, createdAt])
+  @@index([propertyType, isPublished])
+  @@map("new_projects")
+}
+
+model NewProjectUnit {
+  id           BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  newProjectId BigInt     @map("new_project_id") @db.UnsignedBigInt
+  bedrooms     String?    @db.VarChar(255)
+  bathrooms    Int?
+  landArea     Int?       @map("land_area")
+  buildingArea Int?       @map("building_area")
+  createdAt    DateTime?  @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime?  @updatedAt @map("updated_at") @db.Timestamp(0)
+  newProject   NewProject @relation(fields: [newProjectId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "new_project_units_new_project_id_foreign")
+
+  @@index([newProjectId], map: "new_project_units_new_project_id_foreign")
+  @@map("new_project_units")
+}
+
+model Listing {
+  id                                   BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  listingableType                      String        @map("listingable_type") @db.VarChar(255)
+  listingableId                        BigInt        @map("listingable_id") @db.UnsignedBigInt
+  propertyId                           String?       @map("property_id") @db.VarChar(255)
+  category                             String?       @db.VarChar(255)
+  type                                 String?       @default("COBROKE") @db.VarChar(255)
+  status                               String        @default("DRAFT") @db.VarChar(255)
+  locationId                           BigInt?       @map("location_id") @db.UnsignedBigInt
+  isFeatured                           Boolean?      @map("is_featured")
+  address                              String?       @db.Text
+  addressGmaps                         String?       @map("address_gmaps") @db.Text
+  addressNotes                         String?       @map("address_notes") @db.Text
+  longitude                            String?       @db.VarChar(255)
+  latitude                             String?       @db.VarChar(255)
+  price                                BigInt?
+  pricePerSqm                          BigInt?       @map("price_per_sqm")
+  youtubeEmbed                         String?       @map("youtube_embed") @db.Text
+  ownerId                              BigInt?       @map("owner_id") @db.UnsignedBigInt
+  agentId                              BigInt?       @map("agent_id") @db.UnsignedBigInt
+  userId                               BigInt?       @map("user_id") @db.UnsignedBigInt
+  publishedAt                          DateTime?     @map("published_at") @db.DateTime(0)
+  soldAt                               DateTime?     @map("sold_at") @db.DateTime(0)
+  createdAt                            DateTime?     @map("created_at") @db.Timestamp(0)
+  updatedAt                            DateTime?     @updatedAt @map("updated_at") @db.Timestamp(0)
+  aiEnhancePrompt                      String?       @map("ai_enhance_prompt") @db.Text
+  listingLeads                         ListingLead[]
+  priceHistories                       PriceHistory[]
+  syncLogs                             SyncLog[]
+  contacts_listings_agent_idTocontacts Contact?      @relation("listings_agent_idTocontacts", fields: [agentId], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "listings_agent_id_foreign")
+  location                             Location?     @relation(fields: [locationId], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "listings_location_id_foreign")
+  contacts_listings_owner_idTocontacts Contact?      @relation("listings_owner_idTocontacts", fields: [ownerId], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "listings_owner_id_foreign")
+  user                                 User?         @relation(fields: [userId], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "listings_user_id_foreign")
+
+  @@index([agentId], map: "listings_agent_id_foreign")
+  @@index([listingableType, listingableId], map: "listings_listingable_type_listingable_id_index")
+  @@index([locationId], map: "listings_location_id_foreign")
+  @@index([ownerId], map: "listings_owner_id_foreign")
+  @@index([userId], map: "listings_user_id_foreign")
+  @@index([status, createdAt])
+  @@index([status, publishedAt])
+  @@index([locationId, status])
+  @@index([isFeatured, status])
+  @@index([category, status])
+  @@index([propertyId], map: "listings_property_id_index")
+  @@map("listings")
+}
+
+model Translation {
+  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  translatableType String    @map("translatable_type") @db.VarChar(255)
+  translatableId   BigInt    @map("translatable_id") @db.UnsignedBigInt
+  lang             String?   @db.VarChar(255)
+  title            String?   @db.LongText
+  slug             String?   @db.LongText
+  shortDescription String?   @map("short_description") @db.LongText
+  content          String?   @db.LongText
+  seo              Json?
+  faqs             Json?
+  createdAt        DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt        DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([translatableType, translatableId], map: "translations_translatable_type_translatable_id_index")
+  @@index([translatableType, translatableId, lang], map: "translations_type_id_lang_index")
+  @@map("translations")
+}
+
+model Media {
+  id            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  mediableType  String    @map("mediable_type") @db.VarChar(255)
+  mediableId    BigInt    @map("mediable_id") @db.UnsignedBigInt
+  userId        BigInt    @map("user_id") @db.UnsignedBigInt
+  ordinal       Int?
+  mediableGroup    String    @default("default") @map("mediable_group") @db.VarChar(255)
+  aiEnhanceEnabled Boolean   @default(true) @map("ai_enhance_enabled")
+  url              String    @db.VarChar(255)
+  createdAt     DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+  user          User      @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "media_user_id_foreign")
+
+  @@index([mediableType, mediableId], map: "media_mediable_type_mediable_id_index")
+  @@index([userId], map: "media_user_id_foreign")
+  @@map("media")
+}
+
+model Review {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  reviewableType String    @map("reviewable_type") @db.VarChar(255)
+  reviewableId   BigInt    @map("reviewable_id") @db.UnsignedBigInt
+  rating         Float?
+  name           String?   @db.VarChar(255)
+  email          String?   @db.VarChar(255)
+  message        String?   @db.Text
+  isPublished    Boolean   @default(false) @map("is_published")
+  createdAt      DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([reviewableType, reviewableId], map: "reviews_reviewable_type_reviewable_id_index")
+  @@index([reviewableType, isPublished])
+  @@map("reviews")
+}
+
+model Taxonomy {
+  id        BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name      String    @db.VarChar(255)
+  slug      String    @db.VarChar(255)
+  component String    @db.VarChar(255)
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("taxonomies")
+}
+
+model TaxonomyItem {
+  id         BigInt     @id @default(autoincrement()) @db.UnsignedBigInt
+  taxonomyId BigInt     @map("taxonomy_id") @db.UnsignedBigInt
+  name       String     @db.VarChar(255)
+  slug       String     @db.VarChar(255)
+  createdAt  DateTime?  @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime?  @updatedAt @map("updated_at") @db.Timestamp(0)
+  mortgages  Mortgage[]
+
+  @@map("taxonomy_items")
+}
+
+model Taxonomizeable {
+  id                 BigInt @id @default(autoincrement()) @db.UnsignedBigInt
+  taxonomyId         BigInt @map("taxonomy_id") @db.UnsignedBigInt
+  taxonomyItemId     BigInt @map("taxonomy_item_id") @db.UnsignedBigInt
+  taxonomizeableType String @map("taxonomizeable_type") @db.VarChar(255)
+  taxonomizeableId   BigInt @map("taxonomizeable_id") @db.UnsignedBigInt
+
+  @@index([taxonomizeableType, taxonomizeableId], map: "taxonomizeables_taxonomizeable_type_taxonomizeable_id_index")
+  @@map("taxonomizeables")
+}
+
+model Blog {
+  id            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  featuredImage String?   @map("featured_image") @db.VarChar(255)
+  userId        BigInt    @map("user_id") @db.UnsignedBigInt
+  isPublished   Boolean?  @map("is_published")
+  publishedAt   DateTime? @map("published_at") @db.DateTime(0)
+  createdAt     DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt     DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+  user          User      @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "blogs_user_id_foreign")
+
+  @@index([userId], map: "blogs_user_id_foreign")
+  @@index([isPublished, createdAt])
+  @@index([userId, isPublished])
+  @@map("blogs")
+}
+
+model Bank {
+  id             BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  name           String?        @db.VarChar(255)
+  logo           String?        @db.VarChar(255)
+  createdAt      DateTime?      @map("created_at") @db.Timestamp(0)
+  updatedAt      DateTime?      @updatedAt @map("updated_at") @db.Timestamp(0)
+  mortgage_leads MortgageLead[]
+  mortgages      Mortgage[]
+
+  @@map("banks")
+}
+
+model Mortgage {
+  id                 BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  bankId             BigInt         @map("bank_id") @db.UnsignedBigInt
+  mortgageCategoryId BigInt         @map("mortgage_category_id") @db.UnsignedBigInt
+  title              String         @db.VarChar(100)
+  rates              Json
+  minTenure          Int?           @map("min_tenure")
+  maxTenure          Int?           @map("max_tenure")
+  floatInterestRate  Float?         @map("float_interest_rate")
+  createdAt          DateTime?      @map("created_at") @db.Timestamp(0)
+  updatedAt          DateTime?      @updatedAt @map("updated_at") @db.Timestamp(0)
+  mortgageLeads      MortgageLead[]
+  bank               Bank           @relation(fields: [bankId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mortgages_bank_id_foreign")
+  taxonomy_items     TaxonomyItem   @relation(fields: [mortgageCategoryId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mortgages_mortgage_category_id_foreign")
+
+  @@index([bankId], map: "mortgages_bank_id_foreign")
+  @@index([mortgageCategoryId], map: "mortgages_mortgage_category_id_foreign")
+  @@map("mortgages")
+}
+
+model Lead {
+  id              BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  ledableType     String    @map("ledable_type") @db.VarChar(255)
+  ledableId       BigInt    @map("ledable_id") @db.UnsignedBigInt
+  firstName       String    @map("first_name") @db.VarChar(255)
+  lastName        String?   @map("last_name") @db.VarChar(255)
+  email           String?   @db.VarChar(255)
+  countryCode     String    @map("country_code") @db.VarChar(255)
+  phone           String    @db.VarChar(255)
+  clientLevel     String    @default("NEVER_TRANSACTED") @map("client_level") @db.VarChar(255)
+  picId           BigInt?   @map("pic_id") @db.UnsignedBigInt
+  externalAgentId BigInt?   @map("external_agent_id") @db.UnsignedBigInt
+  status          String    @default("NEW") @db.VarChar(255)
+  source          String?   @db.VarChar(255)
+  contactId       BigInt?   @map("contact_id") @db.UnsignedBigInt
+  url             String?   @db.Text
+  isSpam          Boolean   @default(false) @map("is_spam")
+  createdAt       DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+  contact         Contact?  @relation(fields: [contactId], references: [id], onUpdate: NoAction, map: "leads_contact_id_foreign")
+  externalAgent   User?     @relation("ExternalAgentLeads", fields: [externalAgentId], references: [id], onUpdate: NoAction, map: "leads_external_agent_id_foreign")
+  pic             User?     @relation("PicLeads", fields: [picId], references: [id], onUpdate: NoAction, map: "leads_pic_id_foreign")
+
+  @@index([contactId], map: "leads_contact_id_foreign")
+  @@index([externalAgentId], map: "leads_external_agent_id_foreign")
+  @@index([ledableType, ledableId], map: "leads_ledable_type_ledable_id_index")
+  @@index([picId], map: "leads_pic_id_foreign")
+  @@index([status, isSpam])
+  @@index([ledableType, status])
+  @@map("leads")
+}
+
+model ListingLead {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  listingId   BigInt    @map("listing_id") @db.UnsignedBigInt
+  description String    @db.Text
+  createdAt   DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+  listing     Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "listing_leads_listing_id_foreign")
+
+  @@index([listingId], map: "listing_leads_listing_id_foreign")
+  @@map("listing_leads")
+}
+
+model MortgageLead {
+  id                                                       BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  mortgageId                                               BigInt?   @map("mortgage_id") @db.UnsignedBigInt
+  domicileId                                               BigInt?   @map("domicile_id") @db.UnsignedBigInt
+  propertyLocationId                                       BigInt?   @map("property_location_id") @db.UnsignedBigInt
+  user_domicile                                            String?   @db.VarChar(255)
+  user_property_location                                   String?   @db.VarChar(255)
+  propertyType                                             String    @map("property_type") @db.VarChar(255)
+  purchaseStatus                                           String    @map("purchase_status") @db.VarChar(255)
+  price                                                    BigInt
+  otherBankId                                              BigInt?   @map("other_bank_id") @db.UnsignedBigInt
+  createdAt                                                DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt                                                DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+  locations_mortgage_leads_domicile_idTolocations          Location? @relation("mortgage_leads_domicile_idTolocations", fields: [domicileId], references: [id], onUpdate: NoAction, map: "mortgage_leads_domicile_id_foreign")
+  mortgage                                                 Mortgage? @relation(fields: [mortgageId], references: [id], onUpdate: NoAction, map: "mortgage_leads_mortgage_id_foreign")
+  banks                                                    Bank?     @relation(fields: [otherBankId], references: [id], onUpdate: NoAction, map: "mortgage_leads_other_bank_id_foreign")
+  locations_mortgage_leads_property_location_idTolocations Location? @relation("mortgage_leads_property_location_idTolocations", fields: [propertyLocationId], references: [id], onUpdate: NoAction, map: "mortgage_leads_property_location_id_foreign")
+
+  @@index([domicileId], map: "mortgage_leads_domicile_id_foreign")
+  @@index([mortgageId], map: "mortgage_leads_mortgage_id_foreign")
+  @@index([otherBankId], map: "mortgage_leads_other_bank_id_foreign")
+  @@index([propertyLocationId], map: "mortgage_leads_property_location_id_foreign")
+  @@map("mortgage_leads")
+}
+
+model GeneralLead {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  title       String    @db.VarChar(255)
+  description String    @db.Text
+  createdAt   DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("general_leads")
+}
+
+model Setting {
+  id        BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  key       String?   @db.VarChar(255)
+  label     String?   @db.VarChar(255)
+  value     String?   @db.Text
+  createdAt DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("settings")
+}
+
+model SyncLog {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  listingId    BigInt    @map("listing_id") @db.UnsignedBigInt
+  target       String    @db.VarChar(255)
+  action       String    @db.VarChar(255)
+  status       String    @db.VarChar(255)
+  externalId   String?   @map("external_id") @db.VarChar(255)
+  trxId        String?   @map("trx_id") @db.VarChar(255)
+  requestBody  Json?     @map("request_body")
+  responseBody Json?     @map("response_body")
+  errorMessage String?   @map("error_message") @db.Text
+  attempts     Int?      @default(0)
+  createdAt    DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+  listing      Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "sync_logs_listing_id_foreign")
+
+  @@index([listingId], map: "sync_logs_listing_id_foreign")
+  @@map("sync_logs")
+}
+
+model PortalAgent {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  userId      BigInt    @unique @map("user_id") @db.UnsignedBigInt
+  portalAgentId Int       @map("portal_agent_id")
+  companyId   Int       @map("company_id")
+  companyName String?   @map("company_name") @db.VarChar(255)
+  firstname   String    @db.VarChar(255)
+  lastname    String?   @db.VarChar(255)
+  email       String    @db.VarChar(255)
+  profile     String?   @db.Text
+  address     String?   @db.VarChar(255)
+  photo       String?   @db.VarChar(255)
+  phone       String?   @db.VarChar(255)
+  mobile      String    @db.VarChar(255)
+  whatsapp    String    @db.VarChar(255)
+  status      String?   @db.VarChar(10)
+  createdAt   DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("portal_agents")
+}
+
+model PortalArea {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  provinceId   Int?      @map("province_id")
+  provinceName String    @map("province_name") @db.VarChar(255)
+  cityId       Int?      @map("city_id")
+  cityName     String    @map("city_name") @db.VarChar(255)
+  districtId   Int?      @map("district_id")
+  districtName String    @map("district_name") @db.VarChar(255)
+  createdAt    DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([provinceName, cityName, districtName], map: "portal_areas_location_index")
+  @@map("portal_areas")
+}
+
+model Otp {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  otpableType String   @map("otpable_type") @db.VarChar(255)
+  otpableId   BigInt   @map("otpable_id") @db.UnsignedBigInt
+  code       String    @db.VarChar(255)
+  expiredAt  DateTime  @map("expired_at") @db.Timestamp(0)
+  createdAt  DateTime? @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([otpableType, otpableId], map: "otps_otpable_type_otpable_id_index")
+  @@map("otps")
+}
+
+model model_has_permissions {
+  permission_id BigInt     @db.UnsignedBigInt
+  model_type    String     @db.VarChar(255)
+  model_id      BigInt     @db.UnsignedBigInt
+  permissions   Permission @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "model_has_permissions_permission_id_foreign")
+
+  @@id([permission_id, model_id, model_type])
+  @@index([model_id, model_type], map: "model_has_permissions_model_id_model_type_index")
+}
+
+model PriceHistory {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  listingId      BigInt    @map("listing_id") @db.UnsignedBigInt
+  oldPrice       BigInt?   @map("old_price")
+  newPrice       BigInt?   @map("new_price")
+  oldPricePerSqm BigInt?   @map("old_price_per_sqm")
+  newPricePerSqm BigInt?   @map("new_price_per_sqm")
+  changedBy      BigInt?   @map("changed_by") @db.UnsignedBigInt
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  listing        Listing   @relation(fields: [listingId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "price_histories_listing_id_foreign")
+
+  @@index([listingId], map: "price_histories_listing_id_foreign")
+  @@map("price_histories")
+}
+
+enum whatsapp_contact_status {
+  NEW
+  CONTACTED
+  CLOSED
+}
+
+model WhatsAppContact {
+  id          BigInt                   @id @default(autoincrement()) @db.UnsignedBigInt
+  name        String                   @db.VarChar(255)
+  phone       String                   @db.VarChar(255)
+  message     String?                  @db.Text
+  pageUrl     String                   @map("page_url") @db.VarChar(500)
+  listingId   BigInt?                  @map("listing_id") @db.UnsignedBigInt
+  listingName String?                  @map("listing_name") @db.VarChar(255)
+  status      whatsapp_contact_status  @default(NEW)
+  createdAt   DateTime?                @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt   DateTime?                @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@map("whatsapp_contacts")
+}
+
+enum contacts_priority {
+  high
+  medium
+  low
+}
+
+enum contacts_type {
+  vendor
+  agent
+  leads
+}
+
+enum enhancement_status {
+  PENDING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+model WaAgent {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  phone      String    @unique(map: "wa_agents_phone_unique") @db.VarChar(20)
+  userId     BigInt    @map("user_id") @db.UnsignedBigInt
+  larkOpenId String    @map("lark_open_id") @db.VarChar(255)
+  name       String    @db.VarChar(255)
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamp(0)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wa_agents_user_id_foreign")
+
+  @@index([userId], map: "wa_agents_user_id_foreign")
+  @@map("wa_agents")
+}
+
+model ImageEnhancement {
+  id           BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  s3Key        String             @map("s3_key") @db.VarChar(500)
+  baseName     String             @map("base_name") @db.VarChar(255)
+  status       enhancement_status @default(PENDING)
+  errorMessage String?            @map("error_message") @db.Text
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamp(0)
+  updatedAt    DateTime?          @updatedAt @map("updated_at") @db.Timestamp(0)
+
+  @@index([s3Key], map: "image_enhancements_s3_key_index")
+  @@index([status], map: "image_enhancements_status_index")
+  @@map("image_enhancements")
+}
