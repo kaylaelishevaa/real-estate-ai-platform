@@ -8,6 +8,11 @@ import { CommonModule } from './common/common.module';
 import { QueueModule } from './common/queues/queue.module';
 import { LocationModule } from './modules/location/location.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AIModule } from './modules/ai/ai.module';
+import { MediaModule } from './modules/media/media.module';
+import { SyncModule } from './modules/sync/sync.module';
+import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
+import { LarkModule } from './modules/lark/lark.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { CacheInvalidationInterceptor } from './common/interceptors/cache-invalidation.interceptor';
 import { HttpHeadersInterceptor } from './common/interceptors/http-headers.interceptor';
@@ -24,6 +29,11 @@ import { AppController } from './app.controller';
     QueueModule,
     LocationModule,
     AuthModule,
+    AIModule,
+    MediaModule,
+    SyncModule,
+    WhatsAppModule,
+    LarkModule,
   ],
   controllers: [AppController],
   providers: [
