@@ -7,6 +7,8 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\"",
+    "demo": "ts-node --transpile-only demo/run-demo.ts",
+    "eval": "ts-node --transpile-only eval/run-eval.ts",
     "start": "nest start",
     "start:dev": "NODE_OPTIONS=--max-old-space-size=4096 nest start --watch",
     "start:debug": "nest start --debug --watch",
