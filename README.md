@@ -42,7 +42,7 @@ Re-process the same broadcast and you create a duplicate. This repo is about
 backend/
   src/core/            ← framework-agnostic, fully tested, no DB / no network
     extract/           ← deterministic parsers: price, phone, name, tower, enums
-    llm/               ← LLM behind an interface + deterministic fake + Anthropic adapter
+    llm/               ← LLM behind an interface + deterministic fake + OpenAI adapter
     parse/             ← normalize → validate → confidence → model escalation
     intake/            ← whitelist (fails closed)
     store/ + invariants/ ← in-memory write-target, write-ordering, idempotency
@@ -74,12 +74,12 @@ npm run build    # nest build
 
 No database, Redis, API key, or network is required for `demo`, `eval`, or
 `test` — the LLM sits behind an interface with a deterministic fake. Set
-`ANTHROPIC_API_KEY` to run the same pipeline against live Claude.
+`OPENAI_API_KEY` to run the same pipeline against live models.
 
 ### `npm run demo`
 
 ```
-model tier: sonnet   escalation: haiku:0.00 → sonnet:1.00
+model tier: mid   escalation: cheap:0.00 → mid:1.00
 confidence: 1
 ■ WRITTEN
   Pakubuwono View · Tower Redwood · unit 12B
@@ -129,13 +129,18 @@ the top-tier price for all of them is waste; using the cheap model on the messy
 10% is errors. So we start cheap, **score confidence from the normalized result**
 (not the model's self-report), and escalate only when it's low.
 
-| Tier | Model | Input / Output ($/MTok) | Handles |
-|------|-------|--------------------------|---------|
-| 1 | `claude-haiku-4-5` | $1 / $5 | clean template messages |
-| 2 | `claude-sonnet-4-6` | $3 / $15 | messy free-form prose |
-| 3 | `claude-opus-4-8` | $5 / $25 | genuinely ambiguous / conflicting |
+| Tier | Handles | Cost |
+|------|---------|------|
+| `cheap` | clean template messages (the majority) | lowest |
+| `mid` | messy free-form prose | medium |
+| `strong` | genuinely ambiguous / conflicting | highest |
 
-→ `core/parse/confidence.ts`, `core/parse/model-escalation.ts`
+The tiers are **provider-neutral**: the LLM sits behind a `ListingLlmClient`
+interface, so the concrete model per tier lives in one adapter (an OpenAI adapter
+is included; swapping providers is a single file). Tests, demo, and eval run on a
+deterministic fake, so none of them depend on a live model.
+
+→ `core/parse/confidence.ts`, `core/parse/model-escalation.ts`, `core/llm/`
 
 ### 3. Write-order invariant: history before record
 A listing without the chat that produced it is an unauditable orphan and a sign
@@ -160,7 +165,7 @@ payloads and message types that don't exist yet. → `core/intake/message-whitel
 
 ## Tech
 
-NestJS · TypeScript · Prisma (MySQL) · BullMQ/Redis · Anthropic SDK · Jest.
+NestJS · TypeScript · Prisma (MySQL) · BullMQ/Redis · OpenAI SDK · Jest.
 The parser core has zero framework or infrastructure dependencies, which is what
 makes it testable offline.
 

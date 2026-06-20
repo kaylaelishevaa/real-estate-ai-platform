@@ -43,7 +43,7 @@ export const LISTING_FIXTURES: ListingFixture[] = [
       ].join('\n'),
     ),
     expectStatus: 'written',
-    expectTier: 'haiku',
+    expectTier: 'cheap',
     expectFields: {
       tipe_properti: 'Apartemen',
       nama_properti_normalized: 'Pakubuwono View',
@@ -62,7 +62,7 @@ export const LISTING_FIXTURES: ListingFixture[] = [
         '4.5M nego, furnished, owner Pak Budi 08123456789 direct',
     ),
     expectStatus: 'written',
-    expectTier: 'sonnet',
+    expectTier: 'mid',
     expectFields: {
       tipe_properti: 'Apartemen',
       nama_properti_normalized: 'Pakubuwono View',
@@ -112,7 +112,7 @@ export const LISTING_FIXTURES: ListingFixture[] = [
       ].join('\n'),
     ),
     expectStatus: 'written',
-    expectTier: 'haiku',
+    expectTier: 'cheap',
     expectFields: {
       tipe_properti: 'Rumah',
       channel: 'Cobroke',

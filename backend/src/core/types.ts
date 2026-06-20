@@ -29,8 +29,12 @@ export type Channel = 'Direct' | 'Cobroke';
 
 export type Condition = 'Furnished' | 'Semi Furnished' | 'Unfurnished';
 
-/** Model tiers, cheapest → strongest. Index order is the escalation order. */
-export const MODEL_TIERS = ['haiku', 'sonnet', 'opus'] as const;
+/**
+ * Model tiers, cheapest → strongest. Index order is the escalation order.
+ * Provider-neutral on purpose: the concrete model behind each tier is decided
+ * by the LLM adapter, not the pipeline.
+ */
+export const MODEL_TIERS = ['cheap', 'mid', 'strong'] as const;
 export type ModelTier = (typeof MODEL_TIERS)[number];
 
 /**

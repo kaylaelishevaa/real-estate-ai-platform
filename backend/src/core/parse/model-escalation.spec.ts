@@ -25,28 +25,28 @@ describe('parseWithEscalation', () => {
     const llm = new FakeLlmClient();
     const result = await parseWithEscalation(TEMPLATE, llm);
 
-    expect(result.tier).toBe('haiku');
+    expect(result.tier).toBe('cheap');
     expect(result.confidence.shouldEscalate).toBe(false);
     expect(result.attempts).toHaveLength(1);
-    expect(llm.calls.map((c) => c.tier)).toEqual(['haiku']);
+    expect(llm.calls.map((c) => c.tier)).toEqual(['cheap']);
   });
 
   it('escalates to a stronger model when the cheap parse is low-confidence', async () => {
     const llm = new FakeLlmClient();
     const result = await parseWithEscalation(FREEFORM, llm);
 
-    // haiku (template-only) returns a thin draft → escalates to sonnet.
-    expect(llm.calls.map((c) => c.tier)).toEqual(['haiku', 'sonnet']);
-    expect(result.tier).toBe('sonnet');
+    // cheap tier (template-only) returns a thin draft → escalates to mid.
+    expect(llm.calls.map((c) => c.tier)).toEqual(['cheap', 'mid']);
+    expect(result.tier).toBe('mid');
     expect(result.confidence.score).toBeGreaterThanOrEqual(0.7);
-    expect(result.attempts[0].tier).toBe('haiku');
+    expect(result.attempts[0].tier).toBe('cheap');
     expect(result.attempts[0].score).toBeLessThan(result.attempts[1].score);
   });
 
   it('returns the best attempt even if the top tier never clears the bar', async () => {
     const llm = new FakeLlmClient();
     const result = await parseWithEscalation('hi', llm); // no listing data anywhere
-    expect(llm.calls.map((c) => c.tier)).toEqual(['haiku', 'sonnet', 'opus']);
+    expect(llm.calls.map((c) => c.tier)).toEqual(['cheap', 'mid', 'strong']);
     expect(result.attempts).toHaveLength(3);
     // best = highest score seen; never worse than any single attempt
     const maxSeen = Math.max(...result.attempts.map((a) => a.score));

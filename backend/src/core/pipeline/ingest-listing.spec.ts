@@ -26,7 +26,7 @@ describe('ListingIngestPipeline', () => {
 
     expect(r.status).toBe('written');
     expect(r.created).toBe(true);
-    expect(r.tier).toBe('haiku');
+    expect(r.tier).toBe('cheap');
     expect(r.listing?.harga).toBe(4_500_000_000);
     expect(pipe.listings.size()).toBe(1);
   });
@@ -66,7 +66,7 @@ describe('ListingIngestPipeline', () => {
           '2BR 1KM LB 76, 4.5M nego, furnished',
       ),
     );
-    expect(llm.calls.map((c) => c.tier)).toContain('sonnet');
-    expect(r.tier).toBe('sonnet');
+    expect(llm.calls.map((c) => c.tier)).toContain('mid');
+    expect(r.tier).toBe('mid');
   });
 });

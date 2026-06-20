@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import {
   parseWithEscalation,
   FakeLlmClient,
-  AnthropicLlmClient,
+  OpenAiLlmClient,
   type ListingLlmClient,
   type ParseResult,
 } from '../../core';
@@ -15,8 +15,8 @@ import {
  * model escalation — lives in `src/core` and is unit-tested there with no
  * network. This service just selects the LLM backend from config and delegates.
  *
- * When ANTHROPIC_API_KEY is present it parses with live Claude (Haiku → Sonnet →
- * Opus escalation); otherwise it falls back to the deterministic fake so the
+ * When OPENAI_API_KEY is present it parses with live models (cheap → mid →
+ * strong escalation); otherwise it falls back to the deterministic fake so the
  * service is still constructible in environments without a key.
  */
 @Injectable()
@@ -25,11 +25,11 @@ export class AiParserService {
   private readonly llm: ListingLlmClient;
 
   constructor(config: ConfigService) {
-    const key = config.get<string>('ANTHROPIC_API_KEY');
+    const key = config.get<string>('OPENAI_API_KEY');
     if (key) {
-      this.llm = new AnthropicLlmClient(key);
+      this.llm = new OpenAiLlmClient(key);
     } else {
-      this.logger.warn('ANTHROPIC_API_KEY not set — using deterministic fake LLM');
+      this.logger.warn('OPENAI_API_KEY not set — using deterministic fake LLM');
       this.llm = new FakeLlmClient();
     }
   }

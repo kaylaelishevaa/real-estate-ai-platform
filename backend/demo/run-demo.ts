@@ -3,8 +3,8 @@
  *
  * Feeds a fabricated WhatsApp broadcast through the real pipeline and prints the
  * parsed + validated listing and which model tier handled it. By default it uses
- * the deterministic FakeLlmClient; if ANTHROPIC_API_KEY is set it uses live
- * Claude with the same escalation tiers.
+ * the deterministic FakeLlmClient; if OPENAI_API_KEY is set it uses live
+ * models with the same escalation tiers.
  *
  *   npm run demo                 # runs the built-in showcase messages
  *   npm run demo -- "your text"  # parse your own broadcast
@@ -13,7 +13,7 @@
 import {
   ListingIngestPipeline,
   FakeLlmClient,
-  AnthropicLlmClient,
+  OpenAiLlmClient,
   type ListingLlmClient,
   type IngestResult,
   type InboundMessage,
@@ -49,8 +49,8 @@ function fmtMoney(n: number | null): string {
 }
 
 function pickLlm(): { llm: ListingLlmClient; label: string } {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (key) return { llm: new AnthropicLlmClient(key), label: 'live Claude (ANTHROPIC_API_KEY set)' };
+  const key = process.env.OPENAI_API_KEY;
+  if (key) return { llm: new OpenAiLlmClient(key), label: 'live OpenAI (OPENAI_API_KEY set)' };
   return { llm: new FakeLlmClient(), label: 'deterministic fake (no network)' };
 }
 

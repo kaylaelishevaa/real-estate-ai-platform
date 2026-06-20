@@ -97,10 +97,10 @@ class EnvironmentVariables {
   @IsOptional()
   GEMINI_API_KEY?: string;
 
-  // ── Anthropic AI ──────────────────────────────────────────────────────
+  // ── OpenAI (listing parser) ───────────────────────────────────────────
   @IsString()
   @IsOptional()
-  ANTHROPIC_API_KEY?: string;
+  OPENAI_API_KEY?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

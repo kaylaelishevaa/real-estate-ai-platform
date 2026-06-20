@@ -3,13 +3,15 @@
  * stronger one only when the parse is low-confidence.
  *
  * Why this matters for an AI role: most listings are well-formatted template
- * messages that a cheap model parses perfectly. Paying Opus prices for all of
- * them is waste; paying Haiku prices for the messy 10% is errors. Escalation
+ * messages that a cheap model parses perfectly. Paying top-tier prices for all
+ * of them is waste; using the cheap model on the messy 10% is errors. Escalation
  * spends the expensive model only where it changes the answer. See [[confidence]].
  *
- *   haiku  ($1/$5 per MTok)  → most messages
- *   sonnet ($3/$15 per MTok) → messy free-form
- *   opus   ($5/$25 per MTok) → genuinely ambiguous / conflicting
+ *   cheap  → most messages (clean templates)
+ *   mid    → messy free-form prose
+ *   strong → genuinely ambiguous / conflicting
+ *
+ * Tiers are provider-neutral; the concrete model per tier lives in the adapter.
  */
 
 import { MODEL_TIERS, type ModelTier, type ParsedListing } from '../types';
@@ -27,9 +29,9 @@ export interface ParseResult {
 }
 
 export interface EscalationOptions {
-  /** Lowest tier to start at (default 'haiku'). */
+  /** Lowest tier to start at (default 'cheap'). */
   startTier?: ModelTier;
-  /** Highest tier we're willing to pay for (default 'opus'). */
+  /** Highest tier we're willing to pay for (default 'strong'). */
   maxTier?: ModelTier;
 }
 
@@ -43,8 +45,8 @@ export async function parseWithEscalation(
   llm: ListingLlmClient,
   opts: EscalationOptions = {},
 ): Promise<ParseResult> {
-  const start = MODEL_TIERS.indexOf(opts.startTier ?? 'haiku');
-  const max = MODEL_TIERS.indexOf(opts.maxTier ?? 'opus');
+  const start = MODEL_TIERS.indexOf(opts.startTier ?? 'cheap');
+  const max = MODEL_TIERS.indexOf(opts.maxTier ?? 'strong');
 
   const attempts: ParseResult['attempts'] = [];
   let best: ParseResult | null = null;

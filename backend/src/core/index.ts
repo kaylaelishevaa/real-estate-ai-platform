@@ -32,7 +32,7 @@ export { parseWithEscalation, type ParseResult } from './parse/model-escalation'
 // LLM seam
 export type { ListingLlmClient } from './llm/llm-client';
 export { FakeLlmClient } from './llm/fake-llm-client';
-export { AnthropicLlmClient } from './llm/anthropic-llm-client';
+export { OpenAiLlmClient } from './llm/openai-llm-client';
 
 // Intake
 export { filterInbound, ALLOWED_MESSAGE_TYPES, type WhitelistResult } from './intake/message-whitelist';
