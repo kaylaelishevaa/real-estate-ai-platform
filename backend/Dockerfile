@@ -52,7 +52,8 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 
 # ── API server ────────────────────────────────────────────────────────────────
-EXPOSE 3000
+# Documentation only — the app binds process.env.PORT (Railway injects it), default 4000.
+EXPOSE 4000
 
 # Default command runs the HTTP API.
 # The worker service overrides this with: node dist/worker.js

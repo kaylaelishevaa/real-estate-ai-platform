@@ -10,6 +10,7 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import fastifyCookie from '@fastify/cookie';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyHelmet from '@fastify/helmet';
@@ -71,6 +72,9 @@ async function bootstrap() {
   const adminUrl = process.env.ADMIN_URL;
   if (frontendUrl) allowedOrigins.push(frontendUrl);
   if (adminUrl) allowedOrigins.push(adminUrl);
+  // The fullstack demo frontend origin.
+  const webOrigin = process.env.WEB_ORIGIN ?? 'http://localhost:3000';
+  if (!allowedOrigins.includes(webOrigin)) allowedOrigins.push(webOrigin);
 
   app.enableCors({
     origin: allowedOrigins,
@@ -81,6 +85,19 @@ async function bootstrap() {
 
   // ── Global prefix ──────────────────────────────────────────────────────────
   app.setGlobalPrefix('api');
+
+  // ── OpenAPI / Swagger docs at /api/docs ────────────────────────────────────
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Real Estate AI — Listing Parser API')
+    .setDescription(
+      'REST surface for the WhatsApp listing parser. Sanitized public extract — ' +
+        'fabricated fixtures, no live keys. POST /api/listings/parse runs the core pipeline.',
+    )
+    .setVersion('1.0')
+    .addTag('listings')
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
 
   // ── Static files (placeholder images, uploads) ────────────────────────────
   // __dirname is dist/src/ when compiled, so go up 2 levels to project root

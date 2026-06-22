@@ -9,7 +9,7 @@ import { SkipThrottle } from '@nestjs/throttler';
  * Liveness + readiness probe used by Docker HEALTHCHECK and load balancers.
  *
  * Checks:
- *   - PostgreSQL: SELECT 1 (fails fast if DB is unreachable)
+ *   - MySQL: SELECT 1 (fails fast if DB is unreachable)
  *   - Redis:      PING     (reported as 'degraded' but does NOT fail the probe,
  *                           because the app still serves requests when Redis is
  *                           down — caching simply falls back to DB on every hit)
@@ -48,5 +48,18 @@ export class AppController {
       db: 'ok',
       redis: redisOk ? 'ok' : 'degraded',
     };
+  }
+
+  /**
+   * GET /api/health/live — lightweight LIVENESS probe.
+   *
+   * Touches no infrastructure: returns 200 as long as the process is up. Point a
+   * platform health check (e.g. Railway `healthcheckPath`) here for the
+   * deterministic demo deploy, which runs the fake LLM with NO database. The full
+   * `/api/health` above stays the readiness probe for a real deployment.
+   */
+  @Get('health/live')
+  live() {
+    return { status: 'ok' };
   }
 }
