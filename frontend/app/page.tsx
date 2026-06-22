@@ -12,9 +12,9 @@ export default function HomePage() {
         </h1>
         <p className="max-w-2xl text-slate-600">
           Property agents send free-form, bilingual listing messages. This demo runs each one through
-          an LLM pipeline that parses, validates, and structures it — with confidence-based model
+          an LLM pipeline that parses, validates, and structures it, using confidence-based model
           escalation and correctness invariants. It runs on a{' '}
-          <span className="font-medium text-slate-800">deterministic fake model — no API key required</span>,
+          <span className="font-medium text-slate-800">deterministic fake model, no API key required</span>,
           so every run gives the same result.
         </p>
       </section>

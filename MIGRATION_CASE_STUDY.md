@@ -5,10 +5,9 @@ narrative of the engineering decisions. Company, vendor, and person names are ge
 rounded or marked illustrative.*
 
 > **TL;DR (~5-min read).** I migrated the backend of a **live, in-production** real-estate brokerage
-> platform — a catalog of several thousand listings (~2,500 currently published), ~70,000 unique
-> visitors/month
-> — from a legacy Laravel/PHP monolith to a NestJS/TypeScript service **with zero planned downtime; I
-> owned the backend migration end-to-end**, while the public site kept serving traffic the whole time.
+> platform — a catalog of several thousand listings (~2,500 currently published) — from a legacy
+> Laravel/PHP monolith to a NestJS/TypeScript service **with zero planned downtime; I owned the backend
+> migration end-to-end**, while the public site kept serving traffic the whole time.
 > - **The hardest call:** I migrated by **introspecting and *adopting* the legacy database schema**
 >   rather than doing a clean rewrite — so the existing read-only frontend kept working unchanged while
 >   I swapped the engine underneath it. That shipped safely; it also carried a denormalization debt I
@@ -31,7 +30,7 @@ idempotency, and validate-don't-trust invariants here were learned the hard way 
 
 A real-estate brokerage ran its public website, an admin panel, and a sales-ops workflow on top of a
 PHP/Laravel monolith with a MySQL database. The business was live and growing: thousands of property
-listings, tens of thousands of monthly visitors, agents adding and editing listings every day, and
+listings, agents adding and editing listings every day, and
 listings syndicated out to external property portals.
 
 The mandate was to move the backend onto a modern, typed, testable NestJS service **without taking the

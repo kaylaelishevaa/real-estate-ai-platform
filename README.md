@@ -2,9 +2,11 @@
 
 [![CI](https://github.com/kaylaelishevaa/real-estate-ai-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/kaylaelishevaa/real-estate-ai-platform/actions/workflows/ci.yml)
 
-<!-- After deploying, fill in the URLs and uncomment:
-**[▶ Try the live demo](https://YOUR-FRONTEND.up.railway.app/parse)** · [Swagger API](https://YOUR-BACKEND.up.railway.app/api/docs)
--->
+**[▶ Try the live demo](https://honest-balance-production.up.railway.app/parse)** · [Swagger API](https://real-estate-ai-platform-production.up.railway.app/api/docs)
+
+> Runs on a free tier, so the first request may cold-start for ~15–30s.
+
+![Parser demo — paste a messy WhatsApp broadcast and watch it become structured, validated fields](docs/img/demo.gif)
 
 > A **sanitized public extract** of a private production system. Property agents
 > submit listings as free-form WhatsApp broadcasts; an LLM pipeline turns them
