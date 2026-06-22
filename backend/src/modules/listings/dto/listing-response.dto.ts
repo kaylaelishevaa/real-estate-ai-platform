@@ -6,6 +6,13 @@ import { ApiProperty } from '@nestjs/swagger';
  * interceptors.
  */
 
+export class SanityWarningDto {
+  @ApiProperty({ example: 'price_per_sqm_low' }) code!: string;
+  @ApiProperty({ example: 'harga' }) field!: string;
+  @ApiProperty({ example: 'That is about Rp 75.000 per m², which is unusually low. Please confirm.' })
+  message!: string;
+}
+
 export class ListingFieldsDto {
   @ApiProperty({ nullable: true, example: 'Apartemen' }) tipe_properti!: string | null;
   @ApiProperty({ nullable: true, example: 'Pakubuwono View' }) nama_properti!: string | null;
@@ -62,6 +69,9 @@ export class ParseResultDto {
   @ApiProperty({ type: [String], description: 'Required fields still missing (a draft lists these)', example: [] })
   missing!: string[];
 
+  @ApiProperty({ type: [SanityWarningDto], description: 'Advisory plausibility warnings (implausible price/area). Non-blocking.', example: [] })
+  warnings!: SanityWarningDto[];
+
   @ApiProperty({ required: false, nullable: true, description: 'Why the message was rejected (when status=rejected)' })
   reason?: string | null;
 }
@@ -86,4 +96,7 @@ export class ListingSummaryDto {
 export class ListingDetailDto extends ListingSummaryDto {
   @ApiProperty({ type: ListingFieldsDto })
   listing!: ListingFieldsDto;
+
+  @ApiProperty({ type: [SanityWarningDto], description: 'Advisory plausibility warnings. Non-blocking.', example: [] })
+  warnings!: SanityWarningDto[];
 }

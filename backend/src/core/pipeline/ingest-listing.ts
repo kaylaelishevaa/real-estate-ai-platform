@@ -19,6 +19,7 @@ import type { ListingLlmClient } from '../llm/llm-client';
 import { filterInbound } from '../intake/message-whitelist';
 import { parseWithEscalation } from '../parse/model-escalation';
 import { validateListing } from '../parse/field-validation';
+import { sanityCheck, type SanityWarning } from '../parse/sanity-check';
 import type { ConfidenceReport } from '../parse/confidence';
 import { InMemoryListingStore } from '../store/in-memory-listing-store';
 import { InMemoryChatHistoryStore, type ChatMessage } from '../store/in-memory-chat-history';
@@ -37,6 +38,8 @@ export interface IngestResult {
   attempts?: Array<{ tier: ModelTier; score: number }>;
   listing?: ParsedListing;
   missing?: string[];
+  /** Advisory plausibility warnings (implausible price/area). Non-blocking. */
+  warnings?: SanityWarning[];
   created?: boolean;
   revision?: number;
   /** False when the parse had no property identity to key a draft on. */
@@ -74,10 +77,13 @@ export class ListingIngestPipeline {
     const missing = validateListing(listing);
     const recordStatus: ListingStatus = missing.length > 0 ? 'draft' : 'active';
 
+    // 3b. Plausibility check — advisory "are you sure?" warnings (never blocks).
+    const warnings = sanityCheck(listing);
+
     // A draft still needs a property identity to be keyed; without one there's
     // nothing to save against.
     if (!listingKey(listing)) {
-      return { status: 'written', recordStatus, missing, listing, tier, confidence, attempts, persisted: false };
+      return { status: 'written', recordStatus, missing, warnings, listing, tier, confidence, attempts, persisted: false };
     }
 
     // 4. Write: history before record, idempotent by listing key. Re-ingesting a
@@ -91,6 +97,7 @@ export class ListingIngestPipeline {
       status: 'written',
       recordStatus: outcome.record.status,
       missing,
+      warnings,
       listing,
       tier,
       confidence,

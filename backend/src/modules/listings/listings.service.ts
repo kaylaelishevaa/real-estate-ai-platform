@@ -5,6 +5,7 @@ import {
   FakeLlmClient,
   OpenAiLlmClient,
   validateListing,
+  sanityCheck,
   resolveProperty,
   parseUnit,
   cleanName,
@@ -18,6 +19,7 @@ import {
   type InboundMessage,
   type ParsedListing,
   type ListingRecord,
+  type SanityWarning,
   type Channel,
   type ListingType,
 } from '../../core';
@@ -30,6 +32,7 @@ export interface ParseResponse {
   tier: string | null;
   confidence: { score: number; reasons: string[] } | null;
   missing: string[];
+  warnings: SanityWarning[];
   reason: string | null;
 }
 
@@ -144,6 +147,7 @@ export class ListingsService implements OnModuleInit {
         ? { score: r.confidence.score, reasons: r.confidence.reasons }
         : null,
       missing: r.missing ?? [],
+      warnings: r.warnings ?? [],
       reason: r.reason ?? null,
     };
   }
@@ -152,10 +156,10 @@ export class ListingsService implements OnModuleInit {
     return this.pipeline.listings.all().map((rec) => this.toSummary(rec));
   }
 
-  findOne(id: string): ListingSummary & { listing: ParsedListing } {
+  findOne(id: string): ListingSummary & { listing: ParsedListing; warnings: SanityWarning[] } {
     const rec = this.pipeline.listings.get(id);
     if (!rec) throw new NotFoundException(`Listing "${id}" not found`);
-    return { ...this.toSummary(rec), listing: rec.listing };
+    return { ...this.toSummary(rec), listing: rec.listing, warnings: sanityCheck(rec.listing) };
   }
 
   /**
@@ -165,14 +169,14 @@ export class ListingsService implements OnModuleInit {
    * the missing fields completes the draft; one that leaves it incomplete keeps
    * it a draft (the work is never lost). The listing key (the URL id) is stable.
    */
-  update(id: string, dto: UpdateListingDto): ListingSummary & { listing: ParsedListing } {
+  update(id: string, dto: UpdateListingDto): ListingSummary & { listing: ParsedListing; warnings: SanityWarning[] } {
     const rec = this.pipeline.listings.get(id);
     if (!rec) throw new NotFoundException(`Listing "${id}" not found`);
 
     const merged = this.applyPatch(rec.listing, dto);
     const status = validateListing(merged).length > 0 ? 'draft' : 'active';
     const outcome = this.pipeline.listings.upsert(id, merged, status);
-    return { ...this.toSummary(outcome.record), listing: merged };
+    return { ...this.toSummary(outcome.record), listing: merged, warnings: sanityCheck(merged) };
   }
 
   /** Delete a stored listing (the "remove a phantom/duplicate" step). */

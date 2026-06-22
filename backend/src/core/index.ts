@@ -26,6 +26,7 @@ export {
 // Parse pipeline
 export { normalizeListing } from './parse/normalize-listing';
 export { validateListing, formatMissing } from './parse/field-validation';
+export { sanityCheck, pricePerSqm, type SanityWarning } from './parse/sanity-check';
 export { scoreConfidence, ESCALATION_THRESHOLD, type ConfidenceReport } from './parse/confidence';
 export { parseWithEscalation, type ParseResult } from './parse/model-escalation';
 
