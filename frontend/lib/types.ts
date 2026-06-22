@@ -37,6 +37,13 @@ export interface Confidence {
   reasons: string[];
 }
 
+/** Advisory plausibility warning (implausible price/area). Non-blocking. */
+export interface SanityWarning {
+  code: string;
+  field: string;
+  message: string;
+}
+
 export interface ParseResult {
   status: ParseStatus;
   /** When written: 'draft' (missing fields) or 'active' (complete). */
@@ -45,6 +52,7 @@ export interface ParseResult {
   tier: Tier | null;
   confidence: Confidence | null;
   missing: string[];
+  warnings: SanityWarning[];
   reason: string | null;
 }
 
@@ -64,9 +72,10 @@ export interface ListingSummary {
   revision: number;
 }
 
-/** GET/PATCH /api/listings/:id — summary plus the full parsed fields. */
+/** GET/PATCH /api/listings/:id, summary plus the full parsed fields. */
 export interface ListingDetail extends ListingSummary {
   listing: ListingFields;
+  warnings: SanityWarning[];
 }
 
 /** Editable fields sent to PATCH /api/listings/:id (only what changed). */

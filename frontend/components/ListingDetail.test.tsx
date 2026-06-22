@@ -14,6 +14,7 @@ const DETAIL: Detail = {
   id: 'pakubuwonoview:15a',
   status: 'active',
   missing: [],
+  warnings: [],
   nama_properti: 'Pakubuwono View',
   tipe_properti: 'Apartemen',
   tipe_listing: 'Jual',

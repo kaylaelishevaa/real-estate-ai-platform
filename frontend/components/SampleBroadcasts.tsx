@@ -25,6 +25,23 @@ export const SAMPLE_BROADCASTS: { label: string; text: string }[] = [
     ].join('\n'),
   },
   {
+    label: 'Price typo (flags a warning)',
+    text: [
+      'Jalur : Direct',
+      'Nama Properti : South Hills',
+      'Unit : 7B',
+      'Tipe Properti : Apartemen',
+      'Tipe Listing : Jual',
+      'Harga Jual : 4.2jt', // juta typed where miliar was meant
+      'Kamar Tidur : 2',
+      'Kamar Mandi : 1',
+      'Luas Bangunan : 70',
+      'Kondisi : Furnished',
+      'Owner : Andi',
+      'HP Owner : 08123456789',
+    ].join('\n'),
+  },
+  {
     label: 'Cobroke (no owner needed)',
     text: [
       'Jalur : Cobroke',

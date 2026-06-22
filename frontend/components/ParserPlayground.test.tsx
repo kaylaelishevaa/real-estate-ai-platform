@@ -17,6 +17,7 @@ const WRITTEN: ParseResult = {
   tier: 'mid',
   confidence: { score: 1, reasons: [] },
   missing: [],
+  warnings: [],
   reason: null,
   listing: {
     tipe_properti: 'Apartemen',
@@ -82,6 +83,7 @@ describe('ParserPlayground', () => {
       tier: 'cheap',
       confidence: { score: 0.4, reasons: ['no price'] },
       missing: ['harga', 'owner_name'],
+      warnings: [],
       reason: null,
       listing: null,
     });
@@ -94,6 +96,22 @@ describe('ParserPlayground', () => {
     const missing = await screen.findByTestId('missing-fields');
     expect(missing).toHaveTextContent(/harga/i);
     expect(missing).toHaveTextContent(/owner name/i);
+  });
+
+  it('shows a non-blocking plausibility warning when the price looks off', async () => {
+    mockParse.mockResolvedValue({
+      ...WRITTEN,
+      warnings: [
+        { code: 'price_per_sqm_low', field: 'harga', message: 'That is about Rp 75.000 per m², which is unusually low. Please confirm.' },
+      ],
+    });
+    render(<ParserPlayground />);
+    typeBroadcast('Dijual apt South Hills 5A, 2BR 1KM LB 60, 4.5jt furnished, owner Budi 08123456789 direct');
+    fireEvent.click(screen.getByRole('button', { name: /parse listing/i }));
+
+    const warn = await screen.findByTestId('sanity-warnings');
+    expect(warn).toHaveTextContent(/per m²/i);
+    expect(warn).toHaveTextContent(/confirm/i);
   });
 
   it('renders an error state when the API call fails', async () => {

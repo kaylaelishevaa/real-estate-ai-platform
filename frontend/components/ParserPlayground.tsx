@@ -7,6 +7,7 @@ import { humanizeField } from '@/lib/format';
 import { TierBadge } from './TierBadge';
 import { ConfidenceBar } from './ConfidenceBar';
 import { ParsedFields } from './ParsedFields';
+import { SanityWarnings } from './SanityWarnings';
 import { SampleBroadcasts } from './SampleBroadcasts';
 
 function statusBanner(r: ParseResult): { text: string; classes: string } {
@@ -117,6 +118,8 @@ export function ParserPlayground() {
                 </ul>
               </div>
             )}
+
+            <SanityWarnings warnings={result.warnings} />
 
             {result.listing && <ParsedFields listing={result.listing} />}
           </div>

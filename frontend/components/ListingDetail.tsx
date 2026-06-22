@@ -7,6 +7,7 @@ import type { ListingDetail as Detail, UpdateListingPayload } from '@/lib/types'
 import { updateListing, deleteListing } from '@/lib/api';
 import { STATUS_META, humanizeField } from '@/lib/format';
 import { ParsedFields } from './ParsedFields';
+import { SanityWarnings } from './SanityWarnings';
 import { EditListingForm } from './EditListingForm';
 import { ConfirmDelete } from './ConfirmDelete';
 
@@ -102,6 +103,8 @@ export function ListingDetail({ detail, mutate }: { detail: Detail; mutate: Keye
           {detail.missing.map(humanizeField).join(', ')}
         </div>
       )}
+
+      {!editing && <SanityWarnings warnings={detail.warnings} />}
 
       {deleteError && (
         <div data-testid="delete-error" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
