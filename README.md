@@ -29,12 +29,12 @@ from corrupting data.
 
 This repo is the runnable slice. Three companion docs give it depth and breadth:
 
-- **[CASE_STUDY.md](CASE_STUDY.md)** — the AI3 listing-parser deep dive: the AI
+- **[CASE_STUDY.md](CASE_STUDY.md)** — the listing-parser deep dive: the AI
   decisions, the model-escalation tradeoff, and why the correctness eval is the
   centerpiece.
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — the full-system map: a ~40-module
-  NestJS backend (recreated from PHP/Laravel), an admin panel, and a four-agent AI
-  ops stack. AI3 — this repo — is one of those four agents.
+  NestJS backend (recreated from PHP/Laravel), an admin panel, and a multi-agent
+  AI ops stack. The listing parser in this repo is one of those agents.
 - **[MIGRATION_CASE_STUDY.md](MIGRATION_CASE_STUDY.md)** — the zero-downtime
   Laravel/PHP → NestJS migration of the live platform: the schema-adoption call,
   the production-ops discipline, and the AI/portal incidents, told honestly.

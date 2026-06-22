@@ -1,17 +1,17 @@
-# AI3 — A WhatsApp Listing Parser You Can Trust in a Write Path
+# A WhatsApp Listing Parser You Can Trust in a Write Path
 
 *Case study. The production system processes live broker data and is private; this
 document describes the architecture and engineering decisions. The runnable
-companion in this repo is the AI3 slice — parser, validation, model escalation,
-and the correctness eval — with fabricated fixtures and no live keys.*
+companion in this repo is the listing-parser slice — parser, validation, model
+escalation, and the correctness eval — with fabricated fixtures and no live keys.*
 
 > **TL;DR (~5-min read).** Property agents submit listings as free-form,
-> bilingual (Indonesian/English) WhatsApp broadcasts. AI3 turns each one into a
-> structured, validated listing written to a website database and a CRM — without
-> letting a non-deterministic model corrupt the data.
-> - **What it is:** one of four cooperating agents in a brokerage's ops stack
+> bilingual (Indonesian/English) WhatsApp broadcasts. This parser turns each one
+> into a structured, validated listing written to a website database and a CRM —
+> without letting a non-deterministic model corrupt the data.
+> - **What it is:** one of several cooperating agents in a brokerage's ops stack
 >   (reader, communicator, **parser ← this**, guard — see
->   [ARCHITECTURE.md](ARCHITECTURE.md)). AI3 owns the listing write-path.
+>   [ARCHITECTURE.md](ARCHITECTURE.md)). This parser owns the listing write-path.
 > - **The thesis:** the hard part isn't "call an LLM to extract fields." It's
 >   *measuring* correctness, *validating* the model instead of trusting it,
 >   spending the expensive model *only when it changes the answer*, and enforcing
@@ -48,7 +48,7 @@ One line, and almost every field is a small parsing trap:
 That free text then has to become a **trustworthy** structured record in two
 systems of record at once (a website DB and a CRM), with an audit trail, and
 without ever creating a duplicate or a half-row. The acceptance bar the
-production system holds AI3 to is blunt and measurable:
+production system holds this parser to is blunt and measurable:
 
 > **double-create = 0 · record-without-chat-history = 0 · post-write field
 > mismatch = 0**, sustained for 7 consecutive days.
@@ -58,14 +58,15 @@ When I picked up the integrity work, double-creates were actively happening — 
 
 ---
 
-## 2. Where AI3 sits
+## 2. Where this parser sits
 
-AI3 is the **parser** in a four-agent stack: a **reader** (scheduled, derives
-lead status from conversation history), a **communicator** (runs the agent-facing
-WhatsApp bot inside Meta's 24-hour messaging window), AI3 the **parser** (this
-case study), and a **guard** (scheduled, sweeps the data for invariant violations
-and fixes the safe ones). The full system — and the PHP→NestJS recreation it grew
-out of — is in [ARCHITECTURE.md](ARCHITECTURE.md). This document stays inside AI3.
+This service is the **parser** in a four-agent stack: a **reader** (scheduled,
+derives lead status from conversation history), a **communicator** (runs the
+agent-facing WhatsApp bot inside Meta's 24-hour messaging window), the **parser**
+itself (this case study), and a **guard** (scheduled, sweeps the data for invariant
+violations and fixes the safe ones). The full system — and the PHP→NestJS recreation
+it grew out of — is in [ARCHITECTURE.md](ARCHITECTURE.md). This document stays on
+the parser.
 
 ---
 
@@ -323,9 +324,9 @@ release-controlled artifact:
 ### Stack
 
 TypeScript · NestJS · Prisma (MySQL) · BullMQ/Redis · OpenAI SDK behind a
-`ListingLlmClient` interface (deterministic fake for tests/eval/demo) · Jest. The
-production AI3 runs as a queue worker consuming the official WhatsApp Business
-Cloud API via a BSP gateway and writing to a website DB and a CRM.
+`ListingLlmClient` interface (deterministic fake for tests/eval/demo) · Jest. In
+production the parser runs as a queue worker consuming the official WhatsApp
+Business Cloud API via a BSP gateway and writing to a website DB and a CRM.
 
 — Runnable companion: this repo's [`README.md`](README.md) ·
 broader system: [`ARCHITECTURE.md`](ARCHITECTURE.md).

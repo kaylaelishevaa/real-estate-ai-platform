@@ -5,7 +5,8 @@ narrative of the engineering decisions. Company, vendor, and person names are ge
 rounded or marked illustrative.*
 
 > **TL;DR (~5-min read).** I migrated the backend of a **live, in-production** real-estate brokerage
-> platform — a catalog of several thousand listings (~2,500 currently published), ~70,000 visitors/month
+> platform — a catalog of several thousand listings (~2,500 currently published), ~70,000 unique
+> visitors/month
 > — from a legacy Laravel/PHP monolith to a NestJS/TypeScript service **with zero planned downtime; I
 > owned the backend migration end-to-end**, while the public site kept serving traffic the whole time.
 > - **The hardest call:** I migrated by **introspecting and *adopting* the legacy database schema**

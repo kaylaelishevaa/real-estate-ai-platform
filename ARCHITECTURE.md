@@ -1,10 +1,10 @@
 # System Architecture (full scope)
 
-*A sanitized portfolio map of the broader system this repo's AI3 slice belongs
-to. It names no company, contains no real phone numbers, agent names, CRM base
-IDs, credentials, or internal identifiers — architecture level only. The only
-**runnable** part is the AI3 listing parser in this repo; everything else is
-described for context and its source is private.*
+*A sanitized portfolio map of the broader system this repo's listing-parser slice
+belongs to. It names no company, contains no real phone numbers, agent names, CRM
+base IDs, credentials, or internal identifiers — architecture level only. The only
+**runnable** part is the listing parser in this repo; everything else is described
+for context and its source is private.*
 
 ---
 
@@ -41,14 +41,14 @@ flowchart TB
   end
 
   subgraph AI["AI ops stack (4 agents)"]
-    A1["AI1 Reader<br/>scheduled sweeps"]
-    A2["AI2 Communicator<br/>agent-facing WA bot"]
-    A3["AI3 Parser ← THIS REPO<br/>webhook / queue worker"]
-    A4["AI4 Guard<br/>scheduled invariant sweep"]
+    A1["Reader<br/>scheduled sweeps"]
+    A2["Communicator<br/>agent-facing WA bot"]
+    A3["Parser ← THIS REPO<br/>webhook / queue worker"]
+    A4["Guard<br/>scheduled invariant sweep"]
   end
 
   subgraph EXT["External integrations"]
-    WA["WhatsApp Business Cloud API<br/>(via Qontak BSP)"]
+    WA["WhatsApp Business Cloud API<br/>(via a BSP gateway)"]
     CRM["CRM (Lark / Bitable)"]
     PORTAL["Listing portal syndication"]
     OBJ["Object storage + CDN"]
@@ -97,33 +97,34 @@ model.
 
 **AI ops stack — four agents, distinct triggers:**
 
-- **AI1 — Reader** *(scheduled; runs on a reasoning-heavy model).* Sweeps agent
+- **Reader** *(scheduled; runs on a reasoning-heavy model).* Sweeps agent
   conversation history a couple of times a day, derives each client's lead status,
   stage, and follow-up alerts, and writes those structured fields to the CRM. It
   is **read-only on WhatsApp** and queues real-world events (a showing happened,
   a message went unanswered) for confirmation rather than writing them blindly.
-- **AI2 — Communicator** *(scheduled + webhook; agentic).* The agent-facing
+- **Communicator** *(scheduled + webhook; agentic).* The agent-facing
   WhatsApp bot on a dedicated line. It runs the **24-hour-window engine** required
   by the official API (free-form messages only within 24h of an agent's last
   reply; a pre-approved template to re-open the window otherwise), sends
   morning/evening nudges, parses agent replies, creates activity records on
   confirmation, and answers Q&A from layered sources. A safety guard restricts it
   to whitelisted internal agent numbers.
-- **AI3 — Parser** *(webhook / queue worker; this repo).* Turns a free-form
+- **Parser** *(webhook / queue worker; this repo).* Turns a free-form
   listing broadcast into ~15 validated fields and writes the listing to the
   website DB and the CRM, with chat-history-before-record provenance, idempotent
   republish, and cheap→strong **model escalation**. Deep dive:
   [CASE_STUDY.md](CASE_STUDY.md).
-- **AI4 — Guard** *(scheduled).* A daily **invariant sweep** over the data —
+- **Guard** *(scheduled).* A daily **invariant sweep** over the data —
   duplicate property+unit, listing-ID/link consistency, role-conflict rules, WA
   records missing their chat history, prices out of bounds, dangling scheduled
   items. It **auto-fixes only the safe, reversible classes** (each with a
   snapshot + canary + post-verify) and flags everything that needs human judgment.
   It also watches pipeline health and cost, with email as the primary alert
-  channel. AI4 is the outer backstop for the same invariants AI3 enforces inline.
+  channel. The guard is the outer backstop for the same invariants the parser
+  enforces inline.
 
 **External integrations.** **WhatsApp** via the official Business Cloud API
-through **Qontak** (a BSP gateway) — ToS-compliant, with no scraped channel; a
+through **a BSP gateway** — ToS-compliant, with no scraped channel; a
 **CRM** (Lark / Bitable) holding contacts, listings, and the chat-history "birth
 certificate" field; **listing-portal** syndication (a one-way export to an
 external property listing portal); **object storage + CDN** for listing media; and **web
@@ -183,12 +184,12 @@ for access control).
 
 | Area | Status in this repo |
 |------|---------------------|
-| **AI3 listing parser** (parse · validate · model escalation · invariants · eval · demo) | **Runnable** — `npm run demo` / `npm run eval` / `npm test`; see [CASE_STUDY.md](CASE_STUDY.md) and `backend/src/core/`, `backend/src/modules/{ai,whatsapp}` |
+| **Listing parser** (parse · validate · model escalation · invariants · eval · demo) | **Runnable** — `npm run demo` / `npm run eval` / `npm test`; see [CASE_STUDY.md](CASE_STUDY.md) and `backend/src/core/`, `backend/src/modules/{ai,whatsapp}` |
 | Website backend (~40 modules, ~45 models) | Described only — source private |
 | Admin panel (Next.js/React) | Described only — source private |
-| AI1 Reader / AI2 Communicator / AI4 Guard | Described only — source private |
+| Reader / Communicator / Guard agents | Described only — source private |
 | Live integrations (WhatsApp BSP, CRM, portal, CDN, analytics) | Described only; represented in this repo as interfaces + an in-memory write-target |
 
 The point of this document is breadth — to show the system I actually owned —
 without bloating the showcase code. The depth, and the only code you can run, is
-the AI3 slice.
+the listing parser.
