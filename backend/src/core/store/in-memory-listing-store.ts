@@ -7,13 +7,15 @@
  * substance behind the idempotent-republish invariant. See [[idempotent-republish]].
  */
 
-import type { ParsedListing } from '../types';
+import type { ParsedListing, ListingStatus } from '../types';
 
 export interface ListingRecord {
   key: string;
   listing: ParsedListing;
   /** How many times this key has been published (1 = created, >1 = republished). */
   revision: number;
+  /** 'draft' while required fields are missing; 'active' once complete. */
+  status: ListingStatus;
 }
 
 export interface UpsertOutcome {
@@ -33,15 +35,21 @@ export class InMemoryListingStore {
   }
 
   /** Insert a new row, or replace the existing one for this key (no duplicate). */
-  upsert(key: string, listing: ParsedListing): UpsertOutcome {
+  upsert(key: string, listing: ParsedListing, status: ListingStatus): UpsertOutcome {
     const existing = this.rows.get(key);
     const record: ListingRecord = {
       key,
       listing,
       revision: existing ? existing.revision + 1 : 1,
+      status,
     };
     this.rows.set(key, record);
     return { record, created: !existing };
+  }
+
+  /** Remove a listing by key. Returns true if it existed. */
+  delete(key: string): boolean {
+    return this.rows.delete(key);
   }
 
   /** Total distinct listings — the assertion target for "no double-create". */

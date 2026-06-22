@@ -6,11 +6,12 @@
  * report. It runs with NO database and NO network (FakeLlmClient). Exit code is
  * non-zero if any gate fails, so it doubles as a CI check.
  *
- * The four gates:
+ * The gates:
  *   1. Parsed fields match the source message.
  *   2. Republish does NOT double-create.
  *   3. No record is written without its chat history first.
  *   4. The input whitelist fails closed on unknown message types.
+ *   5. A draft never becomes active while required fields are missing.
  */
 
 import {
@@ -21,6 +22,7 @@ import {
   InMemoryChatHistoryStore,
   WriteOrderError,
   normalizeListing,
+  validateListing,
   listingKey,
   filterInbound,
   type ParsedListing,
@@ -71,7 +73,7 @@ function gateWriteOrderUnit(): void {
 
     let threw = false;
     try {
-      writer.commit(listing, []); // no history
+      writer.commit(listing, [], 'active'); // no history
     } catch (e) {
       threw = e instanceof WriteOrderError;
     }
@@ -79,7 +81,7 @@ function gateWriteOrderUnit(): void {
     check('record store is still empty after the failed commit', listings.size() === 0);
 
     // happy path: history is present before the record exists
-    const out = writer.commit(listing, [{ from: '628', text: 'Jual pakview 15A 4.5M' }]);
+    const out = writer.commit(listing, [{ from: '628', text: 'Jual pakview 15A 4.5M' }], 'active');
     const key = listingKey(listing);
     check('on success, history exists for the listing key', history.has(key));
     check('on success, the record is created', out.created === true);
@@ -94,6 +96,8 @@ async function gateFieldMatch(): Promise<void> {
     const r = await pipe.ingest(fx.message);
     console.log(`  ${DIM}${fx.name}${X}`);
     check('status', r.status === fx.expectStatus, `${r.status} vs ${fx.expectStatus}`);
+    if (fx.expectRecordStatus)
+      check('record status', r.recordStatus === fx.expectRecordStatus, `${r.recordStatus} vs ${fx.expectRecordStatus}`);
     if (fx.expectTier) check('model tier', r.tier === fx.expectTier, `${r.tier} vs ${fx.expectTier}`);
 
     if (fx.expectFields && r.listing) {
@@ -139,6 +143,27 @@ async function gateHistoryBacksEveryRecord(): Promise<void> {
   }
 }
 
+async function gateDraftStatus(): Promise<void> {
+  console.log(`\n${B}GATE 5 — a draft never becomes active while required fields are missing${X}`);
+
+  // Every stored record's status must agree with its completeness.
+  const pipe = new ListingIngestPipeline(new FakeLlmClient());
+  for (const fx of LISTING_FIXTURES) await pipe.ingest(fx.message);
+  for (const rec of pipe.listings.all()) {
+    const incomplete = validateListing(rec.listing).length > 0;
+    const want = incomplete ? 'draft' : 'active';
+    check(`"${rec.key.slice(0, 26)}" is ${want}`, rec.status === want, `status=${rec.status}`);
+  }
+
+  // The incomplete fixture IS saved — as a draft, with a missing list.
+  const draftFx = LISTING_FIXTURES.find((f) => f.expectRecordStatus === 'draft')!;
+  const dp = new ListingIngestPipeline(new FakeLlmClient());
+  const r = await dp.ingest(draftFx.message);
+  check('incomplete listing is persisted (not dropped)', dp.listings.size() === 1);
+  check('…with status draft', r.recordStatus === 'draft');
+  check('…and a non-empty missing list', (r.missing ?? []).length > 0);
+}
+
 async function main(): Promise<void> {
   console.log(`${B}Listing parser — correctness eval${X} ${DIM}(no DB, no network)${X}`);
   await gateFieldMatch();
@@ -146,6 +171,7 @@ async function main(): Promise<void> {
   gateWriteOrderUnit();
   await gateHistoryBacksEveryRecord();
   gateWhitelist();
+  await gateDraftStatus();
 
   console.log('');
   if (failures === 0) {

@@ -7,17 +7,19 @@
  * that should handle it.
  */
 
-import type { InboundMessage, ParsedListing, ModelTier } from '../src/core';
+import type { InboundMessage, ParsedListing, ModelTier, ListingStatus } from '../src/core';
 import type { IngestStatus } from '../src/core/pipeline/ingest-listing';
 
 export interface ListingFixture {
   name: string;
   message: InboundMessage;
   expectStatus: IngestStatus;
+  /** Record status when written: 'active' (complete) or 'draft' (missing fields). */
+  expectRecordStatus?: ListingStatus;
   expectTier?: ModelTier;
   /** Subset of normalized fields that must match exactly. */
   expectFields?: Partial<ParsedListing>;
-  /** For needs_more_info cases: keys that must appear in `missing`. */
+  /** For draft cases: keys that must appear in `missing`. */
   expectMissing?: string[];
 }
 
@@ -43,6 +45,7 @@ export const LISTING_FIXTURES: ListingFixture[] = [
       ].join('\n'),
     ),
     expectStatus: 'written',
+    expectRecordStatus: 'active',
     expectTier: 'cheap',
     expectFields: {
       tipe_properti: 'Apartemen',
@@ -62,6 +65,7 @@ export const LISTING_FIXTURES: ListingFixture[] = [
         '4.5M nego, furnished, owner Pak Budi 08123456789 direct',
     ),
     expectStatus: 'written',
+    expectRecordStatus: 'active',
     expectTier: 'mid',
     expectFields: {
       tipe_properti: 'Apartemen',
@@ -90,10 +94,28 @@ export const LISTING_FIXTURES: ListingFixture[] = [
       ].join('\n'),
     ),
     expectStatus: 'written',
+    expectRecordStatus: 'active',
     expectFields: {
       tipe_properti: 'Apartemen', // inferred from the alias
       nama_properti_normalized: 'Pakubuwono View',
       harga: 3_800_000_000,
+    },
+  },
+  {
+    name: 'USD rent — currency + period, complete Cobroke → active',
+    message: text(
+      'Disewakan apartemen Riverside Residence, cobroke, 2BR 2KM LB 90, USD 2,500/month furnished',
+    ),
+    expectStatus: 'written',
+    expectRecordStatus: 'active',
+    expectTier: 'mid',
+    expectFields: {
+      tipe_properti: 'Apartemen',
+      channel: 'Cobroke',
+      tipe_listing: 'Sewa',
+      harga_sewa: 2500,
+      currency: 'USD',
+      rent_period: 'month',
     },
   },
   {
@@ -112,6 +134,7 @@ export const LISTING_FIXTURES: ListingFixture[] = [
       ].join('\n'),
     ),
     expectStatus: 'written',
+    expectRecordStatus: 'active',
     expectTier: 'cheap',
     expectFields: {
       tipe_properti: 'Rumah',
@@ -121,13 +144,14 @@ export const LISTING_FIXTURES: ListingFixture[] = [
     },
   },
   {
-    name: 'incomplete listing → asks for missing fields, writes nothing',
+    name: 'incomplete listing → saved as a draft with the missing list',
     message: text(
       ['Nama Properti : Pakubuwono View', 'Tipe Properti : Apartemen', 'Tipe Listing : Jual'].join(
         '\n',
       ),
     ),
-    expectStatus: 'needs_more_info',
+    expectStatus: 'written',
+    expectRecordStatus: 'draft',
     expectMissing: ['harga', 'unit', 'owner_name', 'owner_phone'],
   },
 ];

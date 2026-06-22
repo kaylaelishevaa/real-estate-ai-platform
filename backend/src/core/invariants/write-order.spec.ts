@@ -23,7 +23,7 @@ describe('write-order invariant: history before record', () => {
   });
 
   it('persists chat history, then the record', () => {
-    const out = writer.commit(listing, [{ from: '628', text: 'Jual pakview 15A 4.5M' }]);
+    const out = writer.commit(listing, [{ from: '628', text: 'Jual pakview 15A 4.5M' }], 'active');
     const key = listingKey(listing);
 
     expect(history.has(key)).toBe(true);
@@ -32,7 +32,7 @@ describe('write-order invariant: history before record', () => {
   });
 
   it('refuses to create an orphan record when there is no history', () => {
-    expect(() => writer.commit(listing, [])).toThrow(WriteOrderError);
+    expect(() => writer.commit(listing, [], 'active')).toThrow(WriteOrderError);
     // Nothing was written to the record store.
     expect(listings.size()).toBe(0);
   });

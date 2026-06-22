@@ -19,13 +19,29 @@ describe('idempotent republish', () => {
     const listing = normalizeListing({ nama_properti: 'pakview', unit: '15A', harga_jual: '4.5M' });
     const msg = [{ from: '628', text: 'Jual pakview 15A 4.5M' }];
 
-    const first = writer.commit(listing, msg);
-    const second = writer.commit(listing, msg);
+    const first = writer.commit(listing, msg, 'active');
+    const second = writer.commit(listing, msg, 'active');
 
     expect(first.created).toBe(true);
     expect(second.created).toBe(false); // republish, not a new row
     expect(second.record.revision).toBe(2);
     expect(listings.size()).toBe(1);
+  });
+
+  it('completing a draft flips it to active in place (no duplicate)', () => {
+    const listings = new InMemoryListingStore();
+    const writer = new OrderedListingWriter(history(), listings);
+    const draft = normalizeListing({ nama_properti: 'pakview', unit: '15A' }); // no price
+    const complete = normalizeListing({ nama_properti: 'pakview', unit: '15A', harga_jual: '4.5M' });
+    const msg = [{ from: '628', text: 'pakview 15A' }];
+
+    const first = writer.commit(draft, msg, 'draft');
+    const second = writer.commit(complete, msg, 'active');
+
+    expect(first.record.status).toBe('draft');
+    expect(second.created).toBe(false); // same key — in-place update
+    expect(second.record.status).toBe('active'); // flipped
+    expect(listings.size()).toBe(1); // never duplicated
   });
 
   it('treats an alias-equivalent name as the same listing', () => {
@@ -35,8 +51,8 @@ describe('idempotent republish', () => {
     const b = normalizeListing({ nama_properti: 'Pakubuwono View', unit: '15A', harga_jual: '4.5M' });
     const msg = [{ from: '628', text: 'x' }];
 
-    writer.commit(a, msg);
-    const second = writer.commit(b, msg);
+    writer.commit(a, msg, 'active');
+    const second = writer.commit(b, msg, 'active');
 
     expect(second.created).toBe(false);
     expect(listings.size()).toBe(1);
@@ -47,8 +63,8 @@ describe('idempotent republish', () => {
     const writer = new OrderedListingWriter(history(), listings);
     const msg = [{ from: '628', text: 'x' }];
 
-    writer.commit(normalizeListing({ nama_properti: 'pakview', unit: '15A', harga_jual: '4.5M' }), msg);
-    writer.commit(normalizeListing({ nama_properti: 'pakview', unit: '16B', harga_jual: '4.5M' }), msg);
+    writer.commit(normalizeListing({ nama_properti: 'pakview', unit: '15A', harga_jual: '4.5M' }), msg, 'active');
+    writer.commit(normalizeListing({ nama_properti: 'pakview', unit: '16B', harga_jual: '4.5M' }), msg, 'active');
 
     expect(listings.size()).toBe(2);
   });

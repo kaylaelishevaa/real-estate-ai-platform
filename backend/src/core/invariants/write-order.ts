@@ -12,7 +12,7 @@
  * [[idempotent-republish]].
  */
 
-import type { ParsedListing } from '../types';
+import type { ParsedListing, ListingStatus } from '../types';
 import type { InMemoryListingStore, UpsertOutcome } from '../store/in-memory-listing-store';
 import type { ChatMessage, InMemoryChatHistoryStore } from '../store/in-memory-chat-history';
 import { listingKey } from '../store/listing-key';
@@ -35,7 +35,7 @@ export class OrderedListingWriter {
    * Throws WriteOrderError (and writes NOTHING new to the record store) if there
    * is no chat history to back the record.
    */
-  commit(listing: ParsedListing, chatHistory: ChatMessage[]): UpsertOutcome {
+  commit(listing: ParsedListing, chatHistory: ChatMessage[], status: ListingStatus): UpsertOutcome {
     const key = listingKey(listing);
 
     if (!chatHistory || chatHistory.length === 0) {
@@ -52,7 +52,8 @@ export class OrderedListingWriter {
       throw new WriteOrderError(`chat history for "${key}" did not persist; aborting record write`);
     }
 
-    // 3. Record SECOND — idempotent by key.
-    return this.listings.upsert(key, listing);
+    // 3. Record SECOND — idempotent by key. Drafts and active listings take the
+    //    same write path; only the status differs.
+    return this.listings.upsert(key, listing, status);
   }
 }

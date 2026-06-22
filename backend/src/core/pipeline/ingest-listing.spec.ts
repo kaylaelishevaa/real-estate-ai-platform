@@ -38,14 +38,28 @@ describe('ListingIngestPipeline', () => {
     expect(pipe.listings.size()).toBe(0);
   });
 
-  it('asks for more info instead of writing a half listing', async () => {
+  it('saves an incomplete listing as a draft (with the missing list)', async () => {
     const pipe = new ListingIngestPipeline(new FakeLlmClient());
     const r = await pipe.ingest(
       textMsg('Nama Properti : Pakubuwono View\nTipe Properti : Apartemen\nTipe Listing : Jual'),
     );
-    expect(r.status).toBe('needs_more_info');
+    expect(r.status).toBe('written');
+    expect(r.recordStatus).toBe('draft');
     expect(r.missing).toEqual(expect.arrayContaining(['harga', 'unit', 'owner_name']));
-    expect(pipe.listings.size()).toBe(0);
+    expect(pipe.listings.size()).toBe(1); // it IS saved (as a draft)
+    expect(pipe.listings.all()[0].status).toBe('draft');
+  });
+
+  it('completing a draft flips it to active without duplicating', async () => {
+    const pipe = new ListingIngestPipeline(new FakeLlmClient());
+    await pipe.ingest(textMsg('Nama Properti : Pakubuwono View\nUnit : 15A\nTipe Properti : Apartemen\nTipe Listing : Jual'));
+    expect(pipe.listings.all()[0].status).toBe('draft');
+
+    const done = await pipe.ingest(textMsg(TEMPLATE)); // same listing, now complete
+    expect(done.recordStatus).toBe('active');
+    expect(done.created).toBe(false);
+    expect(pipe.listings.size()).toBe(1);
+    expect(pipe.listings.all()[0].status).toBe('active');
   });
 
   it('is idempotent across republished broadcasts', async () => {
