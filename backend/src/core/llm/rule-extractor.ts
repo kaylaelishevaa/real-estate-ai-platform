@@ -40,8 +40,11 @@ const KEY_MAP: Record<string, keyof RawListingDraft> = {
   'hp owner': 'owner_phone',
   tower: 'tower_name',
   wing: 'tower_name',
+  'mata uang': 'currency',
+  currency: 'currency',
   catatan: 'notes',
   notes: 'notes',
+  keterangan: 'notes',
 };
 
 /** Parse explicit "Key : Value" lines. Weak-model capability. */
@@ -68,23 +71,37 @@ export function freeformEnrich(text: string, draft: RawListingDraft): RawListing
   const lower = text.toLowerCase();
 
   if (out.harga == null && out.harga_jual == null && out.harga_sewa == null) {
-    const m = PRICE_TOKEN.exec(text);
-    if (m) out.harga = m[0];
+    // A rent price with a period (IDR or USD): "USD 2,300/month", "41jt/bulan".
+    const rent =
+      /\b(?:rent(?:al)?(?:\s*price)?\s*)?((?:usd|us\$|rp|idr|\$)\s*[\d.,]+(?:\s*(?:jt|juta|miliar|milyar|m|k|rb|ribu))?|[\d.,]+\s*(?:jt|juta|miliar|milyar|m|k|rb|ribu))\s*(?:\/|per\s+)\s*(month|bulan|bln|mo|year|tahun|thn)\b/i.exec(
+        text,
+      );
+    if (rent) {
+      out.harga_sewa = `${rent[1].trim()}/${rent[2]}`;
+    } else {
+      const m = PRICE_TOKEN.exec(text);
+      if (m) out.harga = m[0];
+    }
   }
   if (out.owner_phone == null) {
     const m = PHONE_TOKEN.exec(text);
     if (m) out.owner_phone = m[0];
   }
   if (out.kamar_tidur == null) {
-    const m = /\b(studio|\d)\s*(?:br|kt|bedroom|kamar tidur)\b/i.exec(text);
+    // handles "2BR", "2 KT", "2 bedrooms", "studio"
+    const m = /\b(studio|\d+)\s*(?:br|kt|bed(?:room)?s?|kamar tidur)\b/i.exec(text);
     if (m) out.kamar_tidur = m[1];
   }
   if (out.kamar_mandi == null) {
-    const m = /\b(\d)\s*(?:km|kamar mandi|bath)\b/i.exec(text);
+    // handles "1KM", "2 bathrooms", "2 baths"
+    const m = /\b(\d+)\s*(?:km|bath(?:room)?s?|kamar mandi)\b/i.exec(text);
     if (m) out.kamar_mandi = m[1];
   }
   if (out.luas_bangunan == null) {
-    const m = /\b(?:lb|luas bangunan)\s*:?\s*(\d+)/i.exec(text);
+    // labeled "LB 76" first, then an unlabeled area like "127 m2" / "127m²"
+    const m =
+      /\b(?:lb|luas bangunan)\s*:?\s*(\d+)/i.exec(text) ||
+      /\b(\d{2,4})\s*(?:m2|m²|sqm|meter)\b/i.exec(text);
     if (m) out.luas_bangunan = m[1];
   }
   if (out.luas_tanah == null) {
@@ -125,6 +142,25 @@ export function freeformEnrich(text: string, draft: RawListingDraft): RawListing
     // "owner Pak Budi 0812..." / "pemilik Bu Sari" — capture the name run.
     const m = /\b(?:owner|pemilik)\s+((?:pak|bu|ibu|bapak)?\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i.exec(text);
     if (m) out.owner_name = m[1].trim();
+  }
+  if (out.owner_name == null) {
+    // Agents often sign off with the contact's name on its own last line
+    // (e.g. "...payment in advance.\nAkiyoshi"). Treat a final standalone
+    // 1–2 word capitalized line as the owner.
+    const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+    const last = lines[lines.length - 1];
+    if (last && last.length <= 30 && /^[A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)?$/.test(last)) {
+      out.owner_name = last;
+    }
+  }
+  if (out.currency == null && /\b(usd|us\$|dollars?)\b|\$/i.test(text)) out.currency = 'USD';
+  if (out.negotiable == null && /\bnego(?:tiable)?\b/i.test(text)) out.negotiable = true;
+  if (out.notes == null) {
+    // Capture common free-text remarks so the demo surfaces a notes block.
+    const m = text.match(
+      /\b(balcon(?:y|ies)|city view|sea view|garden view|pool view|mountain view|maid(?:'?s)?\s*(?:room|area)|private (?:lift|elevator)|fully furnished|semi furnished|minimum rental[^.\n]*|full payment in advance|service charge[^.\n]*)\b/gi,
+    );
+    if (m) out.notes = [...new Set(m.map((s) => s.trim()))].join('; ');
   }
   return out;
 }

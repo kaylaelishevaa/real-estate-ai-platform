@@ -8,8 +8,8 @@
  * decided here — by code we can unit-test — not by the model.
  */
 
-import type { ParsedListing, RawListingDraft, ListingType, Channel } from '../types';
-import { parsePrice } from '../extract/price';
+import type { ParsedListing, RawListingDraft, ListingType, Channel, Currency } from '../types';
+import { parseMoney, isNegotiable } from '../extract/price';
 import { normalizePhone62, isValidPhone } from '../extract/phone';
 import { cleanName } from '../extract/name';
 import { resolveProperty } from '../extract/property-types';
@@ -19,7 +19,17 @@ import {
   normalizeListingType,
   normalizeChannel,
   normalizePropertyType,
+  normalizeCurrency,
 } from '../extract/enums';
+
+function negotiableFrom(draft: RawListingDraft): boolean {
+  if (draft.negotiable === true) return true;
+  if (typeof draft.negotiable === 'string' && /\b(true|yes|nego(?:tiable)?)\b/i.test(draft.negotiable))
+    return true;
+  return [draft.harga, draft.harga_jual, draft.harga_sewa, draft.notes].some(
+    (v) => typeof v === 'string' && isNegotiable(v),
+  );
+}
 
 function intOrNull(v: unknown): number | null {
   if (v == null || v === '') return null;
@@ -45,10 +55,24 @@ export function normalizeListing(draft: RawListingDraft): ParsedListing {
 
   const { unit, unitRaw } = parseUnit(strOrNull(draft.unit));
 
-  // Prices — the high-stakes deterministic step.
-  const harga_jual = parsePrice(draft.harga_jual ?? null);
-  const harga_sewa = parsePrice(draft.harga_sewa ?? null);
-  const harga = parsePrice(draft.harga ?? null) ?? harga_jual ?? harga_sewa;
+  // Prices — the high-stakes deterministic step (currency + period aware).
+  const moneyJual = parseMoney(draft.harga_jual ?? null);
+  const moneySewa = parseMoney(draft.harga_sewa ?? null);
+  const moneyHarga = parseMoney(draft.harga ?? null);
+
+  const harga_jual = moneyJual?.amount ?? null;
+  const harga_sewa = moneySewa?.amount ?? null;
+  const harga = moneyHarga?.amount ?? harga_jual ?? harga_sewa;
+
+  // Currency: an explicit hint wins, else the currency of whichever price exists.
+  const currency: Currency =
+    normalizeCurrency(draft.currency) ??
+    moneySewa?.currency ??
+    moneyJual?.currency ??
+    moneyHarga?.currency ??
+    'IDR';
+  // Rent period comes from the rent price (or a harga that's quoted per period).
+  const rent_period = moneySewa?.period ?? moneyHarga?.period ?? null;
 
   // Listing type reconciles the explicit label with which prices exist.
   let tipe_listing: ListingType | null = normalizeListingType(draft.tipe_listing);
@@ -76,6 +100,9 @@ export function normalizeListing(draft: RawListingDraft): ParsedListing {
     harga,
     harga_jual,
     harga_sewa,
+    currency,
+    rent_period,
+    negotiable: negotiableFrom(draft),
     kamar_tidur: strOrNull(draft.kamar_tidur),
     kamar_mandi: intOrNull(draft.kamar_mandi),
     luas_bangunan: intOrNull(draft.luas_bangunan),

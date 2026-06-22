@@ -1,4 +1,4 @@
-import { parsePrice } from './price';
+import { parsePrice, parseMoney, isNegotiable } from './price';
 
 describe('parsePrice — Indonesian property price formats', () => {
   it.each([
@@ -33,5 +33,36 @@ describe('parsePrice — Indonesian property price formats', () => {
     expect(parsePrice('')).toBeNull();
     expect(parsePrice(null)).toBeNull();
     expect(parsePrice('negotiable')).toBeNull();
+  });
+});
+
+describe('parseMoney — currency + period', () => {
+  it('defaults to IDR with no period for a sale price', () => {
+    expect(parseMoney('4.5M')).toEqual({ amount: 4_500_000_000, currency: 'IDR', period: null });
+  });
+
+  it('reads an IDR rent price per month', () => {
+    expect(parseMoney('41jt/bulan')).toEqual({ amount: 41_000_000, currency: 'IDR', period: 'month' });
+  });
+
+  it('reads a USD rent price per month', () => {
+    expect(parseMoney('USD 2,300/month')).toEqual({ amount: 2300, currency: 'USD', period: 'month' });
+  });
+
+  it('reads a USD rent price per year', () => {
+    expect(parseMoney('USD 27,600/year')).toEqual({ amount: 27_600, currency: 'USD', period: 'year' });
+  });
+
+  it('picks the MONTHLY figure as canonical from a combined quote', () => {
+    expect(parseMoney('USD 2,300/month or total USD 27,600/year')).toEqual({
+      amount: 2300,
+      currency: 'USD',
+      period: 'month',
+    });
+  });
+
+  it('detects negotiable', () => {
+    expect(isNegotiable('6.3M nego')).toBe(true);
+    expect(isNegotiable('6.3M')).toBe(false);
   });
 });

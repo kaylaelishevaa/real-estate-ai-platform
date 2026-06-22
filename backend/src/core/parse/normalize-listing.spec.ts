@@ -51,4 +51,29 @@ describe('normalizeListing — loose draft → typed listing', () => {
     expect(normalizeListing({ harga_sewa: '30jt' }).tipe_listing).toBe('Sewa');
     expect(normalizeListing({ harga_jual: '2M' }).tipe_listing).toBe('Jual');
   });
+
+  it('carries USD currency, rent period, and notes through', () => {
+    const l = normalizeListing({
+      nama_properti: 'La Maison',
+      harga_sewa: 'USD 2,300/month',
+      tipe_listing: 'Sewa',
+      currency: 'USD',
+      notes: 'City view; Balcony',
+    });
+    expect(l.harga_sewa).toBe(2300);
+    expect(l.harga).toBe(2300); // primary falls back to the rent price
+    expect(l.currency).toBe('USD');
+    expect(l.rent_period).toBe('month');
+    expect(l.notes).toBe('City view; Balcony');
+  });
+
+  it('defaults to IDR and derives currency from the price string', () => {
+    expect(normalizeListing({ harga_jual: '4.5M' }).currency).toBe('IDR');
+    expect(normalizeListing({ harga_sewa: 'USD 1,500/month' }).currency).toBe('USD');
+  });
+
+  it('flags negotiable from a "nego" price', () => {
+    expect(normalizeListing({ harga_jual: '4.5M nego' }).negotiable).toBe(true);
+    expect(normalizeListing({ harga_jual: '4.5M' }).negotiable).toBe(false);
+  });
 });

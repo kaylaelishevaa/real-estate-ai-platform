@@ -29,6 +29,15 @@ export type Channel = 'Direct' | 'Cobroke';
 
 export type Condition = 'Furnished' | 'Semi Furnished' | 'Unfurnished';
 
+/** Listings are mostly in rupiah, but expat/USD rentals exist. */
+export type Currency = 'IDR' | 'USD';
+
+/** Rent can be quoted per month or per year; month is the canonical figure. */
+export type RentPeriod = 'month' | 'year';
+
+/** Lifecycle of a stored listing record. Drafts are saved but never published. */
+export type ListingStatus = 'draft' | 'active';
+
 /**
  * Model tiers, cheapest → strongest. Index order is the escalation order.
  * Provider-neutral on purpose: the concrete model behind each tier is decided
@@ -47,9 +56,10 @@ export interface RawListingDraft {
   unit?: string | null;
   tipe_listing?: string | null;
   channel?: string | null; // raw "Jalur" value: Direct / Cobroke
-  harga?: string | number | null; // "4.5M", "25jt", or a number
+  harga?: string | number | null; // "4.5M", "25jt", "USD 2,300/month", or a number
   harga_jual?: string | number | null;
   harga_sewa?: string | number | null;
+  currency?: string | null; // raw "IDR" / "USD" / "$" hint, if the model surfaced one
   kamar_tidur?: string | null;
   kamar_mandi?: string | number | null;
   luas_bangunan?: string | number | null;
@@ -60,6 +70,7 @@ export interface RawListingDraft {
   owner_name?: string | null;
   owner_phone?: string | null;
   tower_name?: string | null;
+  negotiable?: boolean | string | null; // "nego"
   notes?: string | null;
 }
 
@@ -76,6 +87,9 @@ export interface ParsedListing {
   harga: number | null;
   harga_jual: number | null;
   harga_sewa: number | null;
+  currency: Currency; // defaults to IDR
+  rent_period: RentPeriod | null; // set when a rent price is per month/year
+  negotiable: boolean;
   kamar_tidur: string | null;
   kamar_mandi: number | null;
   luas_bangunan: number | null;

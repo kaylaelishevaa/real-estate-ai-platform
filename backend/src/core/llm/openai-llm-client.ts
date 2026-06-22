@@ -25,11 +25,14 @@ const SYSTEM_PROMPT =
   'You extract real-estate listing fields from free-form bilingual ' +
   '(Indonesian/English) WhatsApp messages sent by property agents. ' +
   'Return ONLY a JSON object with the raw fields you can find. Do not normalize ' +
-  'prices or phone numbers — return them as written. Use null for anything not ' +
-  'present. Channel ("Jalur") is Direct or Cobroke. Keys: tipe_properti, ' +
-  'nama_properti, unit, tipe_listing, channel, harga, harga_jual, harga_sewa, ' +
-  'kamar_tidur, kamar_mandi, luas_bangunan, luas_tanah, lantai, kondisi, ' +
-  'sertifikat, owner_name, owner_phone, tower_name, notes.';
+  'prices or phone numbers — return them as written, INCLUDING the currency and ' +
+  'any "/month" or "/year" period (e.g. "USD 2,300/month"). Set "currency" to ' +
+  '"USD" or "IDR". Set "negotiable" to true if the price says nego/negotiable. ' +
+  'Put free-text remarks (view, facilities, terms) in "notes". Use null for ' +
+  'anything not present. Channel ("Jalur") is Direct or Cobroke. Keys: ' +
+  'tipe_properti, nama_properti, unit, tipe_listing, channel, currency, harga, ' +
+  'harga_jual, harga_sewa, negotiable, kamar_tidur, kamar_mandi, luas_bangunan, ' +
+  'luas_tanah, lantai, kondisi, sertifikat, owner_name, owner_phone, tower_name, notes.';
 
 export class OpenAiLlmClient implements ListingLlmClient {
   private readonly client: OpenAI;

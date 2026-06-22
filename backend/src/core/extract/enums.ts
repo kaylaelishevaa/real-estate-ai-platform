@@ -6,7 +6,15 @@
  * set, returning null when there is no confident match (so validation can ask).
  */
 
-import type { Condition, ListingType, Channel, PropertyType } from '../types';
+import type { Condition, ListingType, Channel, PropertyType, Currency } from '../types';
+
+export function normalizeCurrency(raw: string | null | undefined): Currency | null {
+  if (!raw) return null;
+  const s = String(raw).toLowerCase();
+  if (/usd|us\$|\$|dollar/.test(s)) return 'USD';
+  if (/idr|rp|rupiah/.test(s)) return 'IDR';
+  return null;
+}
 
 export function normalizeCondition(raw: string | null | undefined): Condition | null {
   if (!raw) return null;
