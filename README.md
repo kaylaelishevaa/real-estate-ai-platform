@@ -1,17 +1,43 @@
-# Real Estate AI — WhatsApp Listing Parser
+# Real Estate AI — Fullstack WhatsApp Listing Parser
 
 [![CI](https://github.com/kaylaelishevaa/real-estate-ai-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/kaylaelishevaa/real-estate-ai-platform/actions/workflows/ci.yml)
+
+<!-- After deploying, fill in the URLs and uncomment:
+**[▶ Try the live demo](https://YOUR-FRONTEND.up.railway.app/parse)** · [Swagger API](https://YOUR-BACKEND.up.railway.app/api/docs)
+-->
 
 > A **sanitized public extract** of a private production system. Property agents
 > submit listings as free-form WhatsApp broadcasts; an LLM pipeline turns them
 > into structured, validated records written to a website DB and a CRM. All
 > names, buildings, phones, and credentials here are fabricated.
 
+A fullstack monorepo: a **Next.js + React playground** to paste a broadcast and
+watch it become structured fields in real time, a **NestJS REST API** (with
+Swagger) over the parser, and a framework-agnostic, fully-tested **core pipeline**.
+The whole thing runs with **no database, no network, and no API key** — the LLM
+sits behind an interface with a deterministic fake.
+
 The interesting part isn't "call an LLM to extract fields." It's everything that
 makes an LLM safe to put in a write path: **measuring** correctness, **validating**
 the model's output instead of trusting it, spending the **expensive model only
 when it changes the answer**, and enforcing **invariants** that stop a flaky model
 from corrupting data.
+
+---
+
+## System context
+
+This repo is the runnable slice. Three companion docs give it depth and breadth:
+
+- **[CASE_STUDY.md](CASE_STUDY.md)** — the AI3 listing-parser deep dive: the AI
+  decisions, the model-escalation tradeoff, and why the correctness eval is the
+  centerpiece.
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — the full-system map: a ~40-module
+  NestJS backend (recreated from PHP/Laravel), an admin panel, and a four-agent AI
+  ops stack. AI3 — this repo — is one of those four agents.
+- **[MIGRATION_CASE_STUDY.md](MIGRATION_CASE_STUDY.md)** — the zero-downtime
+  Laravel/PHP → NestJS migration of the live platform: the schema-adoption call,
+  the production-ops discipline, and the AI/portal incidents, told honestly.
 
 ---
 
@@ -36,47 +62,103 @@ Re-process the same broadcast and you create a duplicate. This repo is about
 
 ---
 
-## What's here
+## Architecture
 
 ```
+ Browser                     HTTP / JSON                 In-process
+┌──────────────┐   POST /api/listings/parse   ┌────────────────────────────┐
+│ Next.js +    │ ───────────────────────────▶ │ NestJS REST API            │
+│ React UI     │   GET  /api/listings         │ (Swagger at /api/docs)     │
+│ (playground) │ ◀─────────────────────────── │        │                   │
+└──────────────┘     { success, data }        │        ▼                   │
+                                               │ core pipeline (src/core)   │
+                                               │ whitelist → parse(escalate)│
+                                               │  → validate → write        │
+                                               │        │                   │
+                                               │        ▼                   │
+                                               │ in-memory store + LLM seam │
+                                               │ (deterministic fake LLM)   │
+                                               └────────────────────────────┘
+```
+
+```
+frontend/                Next.js (App Router) + React + Tailwind + SWR
+  app/parse/             ← the parser playground (the centerpiece UI)
+  app/listings/          ← table of parsed listings (GET /api/listings)
+  components/ lib/        ← typed API client, tier badge, fields, tests (Vitest)
+
 backend/
-  src/core/            ← framework-agnostic, fully tested, no DB / no network
-    extract/           ← deterministic parsers: price, phone, name, tower, enums
-    llm/               ← LLM behind an interface + deterministic fake + OpenAI adapter
-    parse/             ← normalize → validate → confidence → model escalation
-    intake/            ← whitelist (fails closed)
+  src/core/              ← framework-agnostic, fully tested, no DB / no network
+    extract/             ← deterministic parsers: price, phone, name, tower, enums
+    llm/                 ← LLM behind an interface + deterministic fake + OpenAI adapter
+    parse/               ← normalize → validate → confidence → model escalation
+    intake/              ← whitelist (fails closed)
     store/ + invariants/ ← in-memory write-target, write-ordering, idempotency
-    pipeline/          ← the slim orchestrator that composes the above
-  src/modules/         ← the production NestJS extract (auth, location, queues,
-                         Prisma schema, security) + thin adapters over core
-  eval/                ← `npm run eval`: the correctness harness
-  demo/                ← `npm run demo`: one-command end-to-end parse
+    pipeline/            ← the slim orchestrator that composes the above
+  src/modules/listings/  ← the REST surface the UI calls (parse / list / get)
+  src/modules/           ← production NestJS extract (auth, queues, Prisma, security)
+  eval/                  ← `npm run eval`: the correctness harness
+  demo/                  ← `npm run demo`: one-command CLI parse
 ```
 
 The **core** is the showcase: small, single-purpose, individually tested units.
-The **NestJS layer** is the real production scaffolding the core was lifted from;
-its WhatsApp worker is a thin adapter that delegates to the tested core rather
-than the original 600-line god-processor (an untested god-file is a liability,
-not a feature).
+The **NestJS layer** exposes it over REST and is the production scaffolding the
+core was lifted from. The **frontend** is a thin, typed client over that API.
 
 ---
 
-## Quickstart
+## Run it
+
+Two terminals. Nothing else — no DB, Redis, or keys needed.
+
+**1 — Backend API** (`http://localhost:4000`, Swagger at `/api/docs`):
 
 ```bash
 cd backend
+cp .env.example .env      # placeholder values are fine for the demo
 npm install
-npm run demo     # parse fabricated broadcasts, print listing + model tier
-npm run eval     # run the correctness gates (pass/fail report)
-npm test         # 77 unit tests
-npm run build    # nest build
+npm run start             # or: npm run start:dev
 ```
 
-No database, Redis, API key, or network is required for `demo`, `eval`, or
-`test` — the LLM sits behind an interface with a deterministic fake. Set
-`OPENAI_API_KEY` to run the same pipeline against live models.
+**2 — Frontend** (`http://localhost:3000`):
 
-### `npm run demo`
+```bash
+cd frontend
+cp .env.example .env      # NEXT_PUBLIC_API_URL=http://localhost:4000/api
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000/parse`, paste a broadcast (or click a sample), and
+watch it parse. Set `OPENAI_API_KEY` in `backend/.env` to use a live model
+instead of the fake.
+
+> **Note:** the listings view is an **in-memory demo store** — parsed records
+> reset when the backend restarts (no database is involved). That's intentional
+> for a zero-infra demo; the production system this was extracted from persists to
+> MySQL + a CRM.
+
+| Env var | Where | Default | Purpose |
+|---------|-------|---------|---------|
+| `NEXT_PUBLIC_API_URL` | frontend | `http://localhost:4000/api` | Backend base URL |
+| `WEB_ORIGIN` | backend | `http://localhost:3000` | CORS origin for the UI |
+| `OPENAI_API_KEY` | backend | _(unset → fake LLM)_ | Optional: live model |
+
+> **Screenshots:** _(add `docs/img/playground.png` and `docs/img/listings.png` here)_
+
+### CLI demo / eval / tests (no servers)
+
+```bash
+cd backend
+npm run demo     # parse fabricated broadcasts, print listing + model tier
+npm run eval     # the correctness gates (pass/fail report)
+npm test         # 97 backend unit tests
+
+cd ../frontend
+npm test         # 9 component tests (Vitest + React Testing Library)
+```
+
+`npm run demo` output:
 
 ```
 model tier: mid   escalation: cheap:0.00 → mid:1.00
@@ -101,15 +183,16 @@ writes. A clean template message is handled by the cheap model alone.
 > for an AI role — so it's the centerpiece here.
 
 `eval/run-eval.ts` runs fabricated fixtures through the real pipeline and asserts
-four correctness gates, printing a pass/fail report and exiting non-zero on any
+five correctness gates, printing a pass/fail report and exiting non-zero on any
 failure (so it doubles as a CI check):
 
 | Gate | What it proves |
 |------|----------------|
-| **1. Parsed fields match source** | The structured output actually reflects the message — price magnitudes, alias expansion, channel, owner, area. |
+| **1. Parsed fields match source** | The structured output reflects the message — price magnitudes, currency (IDR/USD + rent period), alias expansion, channel, owner, area. |
 | **2. Republish does not double-create** | Re-sending the same broadcast updates one row; it never inserts a duplicate. |
 | **3. No record without chat history first** | Every listing is written *after* its provenance; a write with no history is refused, not orphaned. |
 | **4. Whitelist fails closed** | Audio / location / sticker / unknown / malformed messages are rejected, never silently processed. |
+| **5. A draft never becomes active while incomplete** | An incomplete parse is saved as a `draft` (not discarded); it only flips to `active` once every required field is present. |
 
 ---
 
@@ -117,11 +200,12 @@ failure (so it doubles as a CI check):
 
 ### 1. Validate — don't trust — the LLM
 The model returns a **loose draft** (`RawListingDraft`). Deterministic code then
-parses every field into a typed `ParsedListing`: `parsePrice("6.3M")` → a number,
+parses every field into a typed `ParsedListing`: `parseMoney("6.3M")` →
+4.5 billion rupiah, `parseMoney("USD 2,300/month")` → `{ 2300, USD, month }`,
 phones → one canonical key, conditions/types → closed enums. Getting a price
-wrong by 1000× must never depend on model temperature, so that math lives in
-unit-tested code, not the prompt. → `core/parse/normalize-listing.ts`,
-`core/extract/*`
+wrong by 1000× — or silently dropping a USD rent — must never depend on model
+temperature, so that math lives in unit-tested code, not the prompt.
+→ `core/parse/normalize-listing.ts`, `core/extract/*`
 
 ### 2. Confidence-based model escalation (cost ↔ accuracy)
 Most listings are clean template messages a cheap model parses perfectly. Paying
@@ -144,7 +228,8 @@ deterministic fake, so none of them depend on a live model.
 
 ### 3. Write-order invariant: history before record
 A listing without the chat that produced it is an unauditable orphan and a sign
-the pipeline half-failed. The writer persists provenance first, verifies it
+the pipeline half-failed. The writer persists provenance 
+first, verifies it
 landed, then creates the record — and **refuses** to write a record with no
 history. → `core/invariants/write-order.ts`
 
@@ -161,13 +246,25 @@ branched on known types and fell through on the rest, so a shared location or a
 accepts an explicit allowlist and rejects everything else — including malformed
 payloads and message types that don't exist yet. → `core/intake/message-whitelist.ts`
 
+### 6. Drafts are saved, but never *active* until complete
+An incomplete parse isn't discarded — the agent's work would be lost. It's saved
+as a **draft** (with the list of missing fields) on the same write path, keyed by
+the same listing identity, so re-sending or editing the listing to fill the gaps
+flips it `draft → active` **in place** — no duplicate. The line a flaky model
+must never cross isn't "don't save," it's "don't *publish* something incomplete."
+→ `core/pipeline/ingest-listing.ts`, eval gate 5.
+
 ---
 
 ## Tech
 
-NestJS · TypeScript · Prisma (MySQL) · BullMQ/Redis · OpenAI SDK · Jest.
+**Backend:** NestJS · TypeScript · Prisma (MySQL) · BullMQ/Redis · OpenAI SDK ·
+`@nestjs/swagger` · Jest.
+**Frontend:** Next.js (App Router) · React · TypeScript · Tailwind · SWR ·
+Vitest + React Testing Library.
+
 The parser core has zero framework or infrastructure dependencies, which is what
-makes it testable offline.
+makes it testable — and the whole demo runnable — offline.
 
 ## Deliberately out of scope
 
