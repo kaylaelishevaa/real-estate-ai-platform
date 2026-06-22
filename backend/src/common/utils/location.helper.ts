@@ -2,7 +2,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * Returns the ID of a location (by slug) plus every descendant ID,
- * using a PostgreSQL recursive CTE.
+ * using a recursive CTE (MySQL 8+).
  *
  * Shared by LocationService, ListingService, ClusterQueryService, HouseService.
  */

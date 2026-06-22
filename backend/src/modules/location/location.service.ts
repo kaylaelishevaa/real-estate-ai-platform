@@ -410,7 +410,7 @@ export class LocationService {
 
   /**
    * Returns the IDs of a location and ALL its descendants using a
-   * PostgreSQL recursive CTE (Prisma has no native recursive relation support).
+   * recursive CTE (MySQL 8+; Prisma has no native recursive relation support).
    */
   private async getDescendantIds(slug: string): Promise<number[]> {
     const rows = await this.prisma.$queryRaw<{ id: number }[]>`
