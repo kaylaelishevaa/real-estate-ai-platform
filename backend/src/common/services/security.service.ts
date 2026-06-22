@@ -72,6 +72,14 @@ export class SecurityService implements OnModuleDestroy {
       password: config.get<string>('REDIS_PASSWORD') || undefined,
       lazyConnect: true,
       keyPrefix: 'app:sec:',
+      // Fail FAST when Redis is unavailable so security checks fall through to
+      // their fail-open path immediately instead of hanging on a connection
+      // timeout (which would stall every gated GET request). The deterministic
+      // demo runs with no Redis at all.
+      enableOfflineQueue: false,
+      connectTimeout: 1000,
+      maxRetriesPerRequest: 1,
+      retryStrategy: (times) => (times > 3 ? null : Math.min(times * 200, 1000)),
     });
     this.redis.on('error', (err: Error) =>
       this.logger.error(`Security Redis error: ${err.message}`),
