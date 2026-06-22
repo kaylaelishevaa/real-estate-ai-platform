@@ -206,6 +206,22 @@ active` in place — no duplicate. The invariant a flaky model must respect isn'
 "don't save," it's "don't *publish* something incomplete": a draft never becomes
 active while a required field is missing (eval gate 5).
 
+**Plausibility checks — the last line of defense is human error.** Field
+validation proves the required fields are *present*; it says nothing about whether
+a present value is *correct*. The classic failure isn't the model hallucinating,
+it's a person fat-fingering a magnitude: typing `4.5jt` (juta = million) where
+they meant `4.5M` (miliar = billion). That passes every required-field check and
+publishes a listing priced 1000x off. And because these records go straight to a
+**public, client-facing** site, a wrong number isn't a quiet data bug; it's a
+credibility hit the instant a buyer reads it. So a deterministic plausibility
+layer scores the *values*: price bands, a **price-per-m²** sanity check (building
+area for vertical types, land for the rest, mirroring the production confirmation
+summary that surfaces the same figure to the agent), and area/room ranges.
+Anything implausible rides back as a **non-blocking warning** that asks a human to
+confirm ("Rp 4.2M = 4.2 billion, correct?") rather than blocking the save. It is
+the validate-don't-trust thesis turned on the one actor the rest of the pipeline
+can't constrain: the human typing the message. → `core/parse/sanity-check.ts`
+
 ---
 
 ## 5. Reliability & correctness — the eval is the centerpiece

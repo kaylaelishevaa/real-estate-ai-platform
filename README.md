@@ -256,6 +256,20 @@ flips it `draft → active` **in place** — no duplicate. The line a flaky mode
 must never cross isn't "don't save," it's "don't *publish* something incomplete."
 → `core/pipeline/ingest-listing.ts`, eval gate 5.
 
+### 7. Plausibility checks: catch human error before it reaches a client
+Field-validation guarantees the required fields are **present**. It cannot tell
+whether a present value is **right**. An agent who types `4.5jt` (juta = million)
+when they meant `4.5M` (miliar = billion) passes every required-field check and
+publishes a listing priced 1000x off. These records are shown publicly to
+clients, so a wrong price isn't just a data bug, it costs trust the moment a buyer
+sees it. So a deterministic **plausibility layer** scores the *values*, not just
+their presence: price bands, **price-per-m²** (the strongest magnitude-typo
+catch, building area for vertical types, land for the rest), and area/room
+ranges. Anything implausible becomes a **non-blocking warning** asking a human to
+confirm ("Rp 4.2M = 4.2 billion, correct?") before the listing is treated as
+final. Same validate-don't-trust principle, applied to **human** error, not just
+the model's. → `core/parse/sanity-check.ts`
+
 ---
 
 ## Tech
