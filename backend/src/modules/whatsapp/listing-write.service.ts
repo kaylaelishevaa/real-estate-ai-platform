@@ -3,6 +3,7 @@ import {
   OrderedListingWriter,
   InMemoryListingStore,
   InMemoryChatHistoryStore,
+  validateListing,
   type ChatMessage,
   type ParsedListing,
   type ListingRecord,
@@ -23,9 +24,11 @@ export class ListingWriteService {
   private readonly listings = new InMemoryListingStore();
   private readonly writer = new OrderedListingWriter(this.history, this.listings);
 
-  /** Commit a validated listing with its provenance. Throws if history is empty. */
+  /** Commit a listing with its provenance. Throws if history is empty. */
   write(listing: ParsedListing, chatHistory: ChatMessage[]): { record: ListingRecord; created: boolean } {
-    return this.writer.commit(listing, chatHistory);
+    // Same rule as the pipeline: an incomplete listing is saved as a draft.
+    const status = validateListing(listing).length > 0 ? 'draft' : 'active';
+    return this.writer.commit(listing, chatHistory, status);
   }
 
   count(): number {
