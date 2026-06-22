@@ -13,6 +13,7 @@ import { MediaModule } from './modules/media/media.module';
 import { SyncModule } from './modules/sync/sync.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 import { LarkModule } from './modules/lark/lark.module';
+import { ListingsModule } from './modules/listings/listings.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { CacheInvalidationInterceptor } from './common/interceptors/cache-invalidation.interceptor';
 import { HttpHeadersInterceptor } from './common/interceptors/http-headers.interceptor';
@@ -34,6 +35,7 @@ import { AppController } from './app.controller';
     SyncModule,
     WhatsAppModule,
     LarkModule,
+    ListingsModule,
   ],
   controllers: [AppController],
   providers: [
